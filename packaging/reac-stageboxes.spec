@@ -9,6 +9,13 @@ License:        GPL-3.0-or-later
 URL:            https://github.com/FreeREAC/reac-stageboxes
 Source0:        %{name}-%{version}.tar.gz
 
+# find-debuginfo produces an empty debugsourcefiles.list for this single small
+# binary under the desk's current toolchain (gcc 16, fat-LTO objects) and rpm
+# then refuses to build an empty debugsource subpackage. Not a code defect —
+# skip the split debuginfo package rather than carry a build that cannot
+# finish; revisit if the toolchain moves.
+%global debug_package %{nil}
+
 BuildRequires:  meson >= 0.60
 BuildRequires:  ninja-build
 BuildRequires:  gcc
@@ -26,12 +33,24 @@ BuildRequires:  pkgconfig(libpipewire-0.3)
 BuildRequires:  pkgconfig(libspa-0.2)
 BuildRequires:  pkgconfig(gtk4)
 BuildRequires:  pkgconfig(libadwaita-1)
+# Validates the AppStream metainfo at build time, the same way
+# desktop-file-validate proves the .desktop file.
+BuildRequires:  appstream
 
 # reac-pw is what makes this application do anything: it publishes the nodes
-# this reads and writes. A REQUIRES and not a RECOMMENDS — installed alone,
-# this window would have nothing to show and no door to write to.
-Requires:       reac-pw
+# this reads and writes, and >= 1.0.5 is the first version this was built and
+# proven against. A REQUIRES and not a RECOMMENDS — installed alone, this
+# window would have nothing to show and no door to write to.
+Requires:       reac-pw >= 1.0.5
 Requires:       pipewire
+Requires:       hicolor-icon-theme
+
+# The icon cache is a system-wide index gtk-update-icon-cache maintains over
+# %%{_datadir}/icons/hicolor; every package that drops a file under it must
+# refresh that cache the same way, so the icon is found the moment this
+# package lands and is retired the moment it leaves.
+Requires(post):   gtk-update-icon-cache
+Requires(postun): gtk-update-icon-cache
 
 %description
 A GTK4/libadwaita application that sets phantom power, the pad and the
@@ -66,12 +85,29 @@ confirmed must not be shown as applied.
 %check
 %meson_test
 
+%post
+if [ -x %{_bindir}/gtk-update-icon-cache ]; then
+  %{_bindir}/gtk-update-icon-cache -q %{_datadir}/icons/hicolor &>/dev/null || :
+fi
+
+%postun
+if [ -x %{_bindir}/gtk-update-icon-cache ]; then
+  %{_bindir}/gtk-update-icon-cache -q %{_datadir}/icons/hicolor &>/dev/null || :
+fi
+
+%posttrans
+if [ -x %{_bindir}/gtk-update-icon-cache ]; then
+  %{_bindir}/gtk-update-icon-cache -q %{_datadir}/icons/hicolor &>/dev/null || :
+fi
+
 %files -f %{name}.lang
 %license LICENSE
 %doc README.md
 %{_bindir}/reac-stageboxes
 %{_datadir}/applications/org.freereac.Stageboxes.desktop
+%{_datadir}/metainfo/org.freereac.Stageboxes.metainfo.xml
 %{_datadir}/icons/hicolor/scalable/apps/org.freereac.Stageboxes.svg
+%{_datadir}/icons/hicolor/symbolic/apps/org.freereac.Stageboxes-symbolic.svg
 
 %changelog
 * Mon Sep 14 2026 Pau Aliagas <linuxnow@gmail.com> - 0.1.0-1

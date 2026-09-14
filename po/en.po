@@ -307,5 +307,5 @@ msgid "Set phantom power, pad and sensitivity on every REAC stagebox preamp"
 msgstr "Set phantom power, pad and sensitivity on every REAC stagebox preamp"
 
 #: data/org.freereac.Stageboxes.desktop.in:9
-msgid "REAC;stagebox;preamp;phantom;pad;gain;Roland;PipeWire;"
-msgstr "REAC;stagebox;preamp;phantom;pad;gain;Roland;PipeWire;"
+msgid "REAC;Roland;stagebox;preamp;PipeWire;"
+msgstr "REAC;Roland;stagebox;preamp;PipeWire;"

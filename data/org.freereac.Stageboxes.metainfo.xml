@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Copyright (C) 2026 Pau Aliagas <linuxnow@gmail.com> -->
+<component type="desktop-application">
+  <id>org.freereac.Stageboxes</id>
+  <metadata_license>FSFAP</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <developer id="org.freereac">
+    <name>Pau Aliagas</name>
+  </developer>
+
+  <name>REAC Stageboxes</name>
+  <name xml:lang="ca">Caixes d'escenari REAC</name>
+
+  <summary>Set phantom power, pad and sensitivity on every REAC stagebox preamp</summary>
+  <summary xml:lang="ca">Ajusta l'alimentació fantasma, l'atenuador i la sensibilitat de cada previ de caixa d'escenari REAC</summary>
+
+  <description>
+    <p>
+      A GTK4/libadwaita application that sets phantom power, the pad and the
+      sensitivity on every input of every REAC stagebox on the wire.
+    </p>
+    <p>
+      It is a PipeWire client, not a REAC one: reac-pw's master node takes
+      per-input head-amp changes as SPA_PARAM_Props and publishes the box
+      badge, the preamp shape and the asserted state as node properties on
+      that same node. This application binds that node and reads and writes
+      it — there is no REAC protocol code here, no socket, and no second
+      copy of any fact the daemon already holds. Installing reac-pw is the
+      whole dependency.
+    </p>
+    <p xml:lang="ca">
+      Una aplicació GTK4/libadwaita que ajusta l'alimentació fantasma,
+      l'atenuador i la sensibilitat de cada entrada de cada caixa d'escenari
+      REAC present al cable.
+    </p>
+    <p xml:lang="ca">
+      És un client de PipeWire, no de REAC: el node mestre de reac-pw
+      accepta els canvis de previ per entrada com a SPA_PARAM_Props i publica
+      la insígnia de la caixa, la forma dels previs i l'estat fixat com a
+      propietats del mateix node. Aquesta aplicació vincula aquest node i el
+      llegeix i l'escriu — no hi ha cap codi de protocol REAC aquí, cap sòcol,
+      ni cap còpia addicional de cap fet que el dimoni ja tingui. Instal·lar
+      reac-pw és tota la dependència.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">org.freereac.Stageboxes.desktop</launchable>
+
+  <url type="homepage">https://github.com/FreeREAC/reac-stageboxes</url>
+  <url type="bugtracker">https://github.com/FreeREAC/reac-stageboxes/issues</url>
+
+  <provides>
+    <binary>reac-stageboxes</binary>
+  </provides>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.1.0" date="2026-09-14">
+      <description>
+        <p>First package.</p>
+      </description>
+    </release>
+  </releases>
+</component>
