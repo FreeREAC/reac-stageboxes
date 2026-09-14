@@ -1,0 +1,4 @@
+data/org.freereac.Stageboxes.desktop.in
+src/rs-box.c
+src/rs-pw.c
+src/rs-window.c

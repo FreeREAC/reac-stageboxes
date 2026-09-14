@@ -1,0 +1,199 @@
+# Catalan translation of reac-stageboxes.
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Pau Aliagas <linuxnow@gmail.com>
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: reac-stageboxes 0.1.0\n"
+"Report-Msgid-Bugs-To: linuxnow@gmail.com\n"
+"POT-Creation-Date: 2026-09-14 12:00+0200\n"
+"PO-Revision-Date: 2026-09-14 12:00+0200\n"
+"Last-Translator: Pau Aliagas <linuxnow@gmail.com>\n"
+"Language-Team: Catalan\n"
+"Language: ca\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+
+#: data/org.freereac.Stageboxes.desktop.in:3 src/rs-window.c:337
+#: src/rs-window.c:492 src/rs-window.c:548
+msgid "REAC Stageboxes"
+msgstr "Caixes d'escenari REAC"
+
+#: data/org.freereac.Stageboxes.desktop.in:4
+msgid "Set phantom power, pad and sensitivity on every REAC stagebox preamp"
+msgstr "Ajusta l'alimentació fantasma, l'atenuador i la sensibilitat de cada previ de caixa d'escenari REAC"
+
+#: data/org.freereac.Stageboxes.desktop.in:9
+msgid "REAC;stagebox;preamp;phantom;pad;gain;Roland;PipeWire;"
+msgstr "REAC;caixa d'escenari;previ;fantasma;atenuador;guany;Roland;PipeWire;"
+
+#: src/rs-box.c:251
+msgid "fw"
+msgstr "fw"
+
+#: src/rs-box.c:253
+msgid "REAC"
+msgstr "REAC"
+
+#: src/rs-pw.c:258
+msgid "Could not create a PipeWire loop."
+msgstr "No s'ha pogut crear el bucle de PipeWire."
+
+#: src/rs-pw.c:268
+msgid "Could not create a PipeWire context."
+msgstr "No s'ha pogut crear el context de PipeWire."
+
+#: src/rs-pw.c:278
+msgid "Could not connect to PipeWire. Is the session running?"
+msgstr "No s'ha pogut connectar amb PipeWire. La sessió s'està executant?"
+
+#: src/rs-pw.c:287
+msgid "Could not read the PipeWire registry."
+msgstr "No s'ha pogut llegir el registre de PipeWire."
+
+#: src/rs-pw.c:316
+msgid "That stagebox has left the graph."
+msgstr "Aquesta caixa d'escenari ja no és al graf."
+
+#: src/rs-pw.c:321
+msgid "This segment has no control door: another master owns it."
+msgstr "Aquest segment no té porta de control: el governa un altre mestre."
+
+#: src/rs-pw.c:330
+msgid "No wire address for this input: the box has announced no base."
+msgstr "Aquesta entrada no té adreça de cable: la caixa no ha anunciat cap base."
+
+#: src/rs-pw.c:339
+msgid "That value is outside what the daemon accepts."
+msgstr "Aquest valor és fora del que accepta el dimoni."
+
+#: src/rs-window.c:82
+msgid "Another master owns this segment, so there is no preamp control here."
+msgstr "Aquest segment el governa un altre mestre; aquí no hi ha control de previs."
+
+#: src/rs-window.c:84
+msgid ""
+"This box is strapped to REAC master mode. Its preamps are set on the box "
+"itself, over its serial port — REAC carries no preamp control to a box in "
+"master mode."
+msgstr "Aquesta caixa està configurada en mode mestre REAC. Els seus previs es configuren a la caixa mateixa, pel port sèrie: REAC no transporta cap control de previ cap a una caixa en mode mestre."
+
+#: src/rs-window.c:86
+msgid "No stagebox recognised on this segment yet."
+msgstr "Encara no s'ha reconegut cap caixa d'escenari en aquest segment."
+
+#: src/rs-window.c:88
+msgid ""
+"The box has announced no head-amp base, so its inputs have no wire address."
+msgstr "La caixa no ha anunciat cap base de previs, de manera que les seves entrades no tenen adreça de cable."
+
+#: src/rs-window.c:90
+msgid "The link to this box is not established."
+msgstr "L'enllaç amb aquesta caixa no està establert."
+
+#: src/rs-window.c:92
+msgid ""
+"No readback from this daemon: it publishes no head-amp state, so a change "
+"could not be confirmed. Shown read-only."
+msgstr "Aquest dimoni no retorna cap lectura: no publica l'estat dels previs, de manera que no es podria confirmar cap canvi. Es mostra només de lectura."
+
+#: src/rs-window.c:105
+msgid "Refused: the box is in master mode."
+msgstr "Refusat: la caixa és en mode mestre."
+
+#: src/rs-window.c:107
+msgid "Refused: no box on this segment."
+msgstr "Refusat: no hi ha cap caixa en aquest segment."
+
+#: src/rs-window.c:109
+msgid "Refused: no wire address for this box."
+msgstr "Refusat: aquesta caixa no té adreça de cable."
+
+#: src/rs-window.c:111
+msgid "Refused: the daemon did not recognise that control."
+msgstr "Refusat: el dimoni no ha reconegut aquest control."
+
+#: src/rs-window.c:113
+msgid "Refused: that value is out of range."
+msgstr "Refusat: aquest valor és fora d'interval."
+
+#: src/rs-window.c:114
+#, c-format
+msgid "Refused by the daemon: %s"
+msgstr "Refusat pel dimoni: %s"
+
+#: src/rs-window.c:142
+msgid "Writing…"
+msgstr "S'està escrivint…"
+
+#: src/rs-window.c:185
+#, c-format
+msgid "%d dBu"
+msgstr "%d dBu"
+
+#: src/rs-window.c:208
+#, c-format
+msgid "Input %d"
+msgstr "Entrada %d"
+
+#: src/rs-window.c:229
+msgid "Phantom power (+48 V)"
+msgstr "Alimentació fantasma (+48 V)"
+
+#: src/rs-window.c:238
+msgid "Pad (−20 dB)"
+msgstr "Atenuador (−20 dB)"
+
+#: src/rs-window.c:247
+msgid "Sensitivity"
+msgstr "Sensibilitat"
+
+#: src/rs-window.c:289
+#, c-format
+msgid "wire channel %d"
+msgstr "canal de cable %d"
+
+#: src/rs-window.c:324
+msgid "No readback from this daemon."
+msgstr "Aquest dimoni no retorna cap lectura."
+
+#: src/rs-window.c:326
+msgid "Nothing asserted for this input yet."
+msgstr "Encara no s'ha fixat res per a aquesta entrada."
+
+#: src/rs-window.c:376
+msgid "No box"
+msgstr "Sense caixa"
+
+#: src/rs-window.c:387
+msgid "slave"
+msgstr "esclau"
+
+#: src/rs-window.c:515
+msgid "Stageboxes"
+msgstr "Caixes d'escenari"
+
+#: src/rs-window.c:520
+msgid "Inputs"
+msgstr "Entrades"
+
+#: src/rs-window.c:531
+msgid "No PipeWire session"
+msgstr "Cap sessió de PipeWire"
+
+#: src/rs-window.c:534
+msgid "No stageboxes"
+msgstr "Cap caixa d'escenari"
+
+#: src/rs-window.c:536
+msgid ""
+"No REAC segment is present in the PipeWire graph. reac-pw publishes one node "
+"per segment; a segment appears here as soon as it does."
+msgstr "No hi ha cap segment REAC al graf de PipeWire. reac-pw publica un node per segment; un segment apareixerà aquí tan aviat com ho faci."
+
+#: src/rs-window.c:558
+msgid "Preamps"
+msgstr "Previs"

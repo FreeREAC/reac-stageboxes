@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=REAC Stageboxes
+Comment=Set phantom power, pad and sensitivity on every REAC stagebox preamp
+Icon=org.freereac.Stageboxes
+Exec=reac-stageboxes
+Terminal=false
+Categories=AudioVideo;Audio;Settings;
+Keywords=REAC;stagebox;preamp;phantom;pad;gain;Roland;PipeWire;
+StartupNotify=true
