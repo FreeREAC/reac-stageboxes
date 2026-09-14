@@ -64,6 +64,23 @@ is configured: the application watches the PipeWire registry, and a segment
 appears in the sidebar as soon as reac-pw publishes it and disappears when it
 goes. Pick a box; set its inputs.
 
+`reac-stageboxes --list` prints the same walk with no window: every segment it
+finds, its badge and capability, and each input's asserted values. It only
+reads. It exits 0 when it found at least one segment and 1 when it found none,
+and it prints how many nodes it bound either way — because "no stageboxes" and
+"the walk saw nothing" are different facts that look identical in an empty list.
+
+```
+$ reac-stageboxes --list
+3 REAC segments (27 nodes bound)
+
+segment enp131s0.11      door=sink   model=s1608          width=16x8   link=established
+        base=32 channels=16 caps=phantom,pad,sens sens.max=55
+        mac=00:40:ab:c4:80:3b fw=2.200 reac=2.302 master=us refused=none readback=yes -> ok
+          in  1  ch  32  phantom=on  pad=off sens=32 (-42 dBu)
+          ...
+```
+
 Anyone in the session can write, because reac-pw is a user service on the user's
 PipeWire socket — the same permission any application has over any device's
 volume.

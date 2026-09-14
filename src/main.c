@@ -16,6 +16,7 @@
 #include <locale.h>
 #include <pipewire/pipewire.h>
 
+#include "rs-list.h"
 #include "rs-pw.h"
 #include "rs-window.h"
 
@@ -48,6 +49,19 @@ int main(int argc, char **argv)
 	textdomain(GETTEXT_PACKAGE);
 
 	pw_init(&argc, &argv);
+
+	/* --list: the same registry walk, printed, with no display and no write.
+	 * It is how the walk is proven against a live graph over a terminal — the
+	 * one part of this application that no offline test can reach. Handled
+	 * before the application object exists, so it needs no session bus and no
+	 * DISPLAY. */
+	for (int i = 1; i < argc; i++) {
+		if (g_strcmp0(argv[i], "--list") == 0) {
+			int rc = rs_list_run();
+			pw_deinit();
+			return rc;
+		}
+	}
 
 	g_autoptr(AdwApplication) app =
 	        adw_application_new(APP_ID, G_APPLICATION_DEFAULT_FLAGS);

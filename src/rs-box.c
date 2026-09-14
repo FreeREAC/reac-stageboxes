@@ -189,6 +189,13 @@ gboolean rs_box_update_from_dict(RsBox *self, const struct spa_dict *props)
 }
 
 uint32_t    rs_box_id(RsBox *self)            { return self->id; }
+
+void rs_box_set_door(RsBox *self, uint32_t id, gboolean is_sink_door)
+{
+	g_return_if_fail(RS_IS_BOX(self));
+	self->id = id;
+	self->is_sink_door = is_sink_door;
+}
 const char *rs_box_segment(RsBox *self)       { return self->segment; }
 gboolean    rs_box_is_sink_door(RsBox *self)  { return self->is_sink_door; }
 const char *rs_box_model(RsBox *self)         { return self->model; }

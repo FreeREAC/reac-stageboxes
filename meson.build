@@ -54,9 +54,11 @@ spa_dep      = dependency('libspa-0.2')
 headamp_sources = files('src/rs-headamp.c')
 props_sources   = files('src/rs-props.c')
 box_sources     = files('src/rs-box.c')
+walk_sources    = files('src/rs-walk.c')
 
-app_sources = headamp_sources + props_sources + box_sources + files(
+app_sources = headamp_sources + props_sources + box_sources + walk_sources + files(
   'src/main.c',
+  'src/rs-list.c',
   'src/rs-pw.c',
   'src/rs-window.c',
 )

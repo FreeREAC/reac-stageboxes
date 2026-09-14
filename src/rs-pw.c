@@ -3,6 +3,7 @@
 
 #include "rs-pw.h"
 #include "rs-props.h"
+#include "rs-walk.h"
 
 #include <glib-unix.h>
 #include <glib/gi18n.h>
@@ -11,14 +12,16 @@
 #include <spa/pod/builder.h>
 #include <spa/utils/result.h>
 
-/* One bound node: the segment's door, plus the model object the surface renders. */
+/* One BOUND NODE. Every node in the graph gets one, because whether a node is a
+ * stagebox segment cannot be known until it is bound — the registry's global
+ * event does not carry `reac.segment` (see rs-walk.h). Whether this particular
+ * node turned out to be a segment is the walk's business, not this struct's. */
 typedef struct {
 	RsPw            *owner;
 	uint32_t         id;
 	struct pw_node  *proxy;
 	struct spa_hook  listener;
 	struct spa_hook  proxy_listener;
-	RsBox           *box;
 } NodeEntry;
 
 struct _RsPw {
@@ -33,8 +36,14 @@ struct _RsPw {
 	guint               fd_source;
 	gboolean            entered;
 
-	GHashTable *nodes;      /* uint32 id -> NodeEntry* */
-	GPtrArray  *boxes;      /* RsBox*, borrowed from the entries */
+	GHashTable *nodes;      /* uint32 id -> NodeEntry*, one per BOUND node */
+	RsWalk     *walk;       /* which of them are segments */
+
+	/* A core roundtrip, for a caller that needs the graph enumerated before it
+	 * can answer — `--list`, which must not guess with a sleep. */
+	int          sync_seq;
+	RsPwSyncFn   sync_cb;
+	gpointer     sync_data;
 };
 
 enum {
@@ -57,13 +66,17 @@ G_DEFINE_QUARK(rs-pw-error, rs_pw_error)
  * badge timer, a box establishing or dropping, and (once the readback lane
  * lands) every head-amp assertion. This is the ONLY place a value reaches the
  * model: there is no path from a widget straight into its own state. */
+/* THE FULL PROPERTY DICT, and the only place this application ever sees
+ * `reac.segment` or a `reac.headamp.*` key. The registry's global event carries
+ * neither. So membership is decided here, on every info, and a node that grows
+ * the key later (a role swap re-stamps the identity) becomes a segment the
+ * moment it does. */
 static void on_node_info(void *data, const struct pw_node_info *info)
 {
 	NodeEntry *e = data;
-	if (!info || !(info->change_mask & PW_NODE_CHANGE_MASK_PROPS) || !info->props)
+	if (!info || !info->props)
 		return;
-	if (rs_box_update_from_dict(e->box, info->props))
-		g_signal_emit(e->owner, signals[SIG_BOX_CHANGED], 0, e->box);
+	rs_walk_info(e->owner->walk, e->id, info->props);
 }
 
 static const struct pw_node_events node_events = {
@@ -80,7 +93,6 @@ static void node_entry_free(gpointer p)
 	spa_hook_remove(&e->proxy_listener);
 	if (e->proxy)
 		pw_proxy_destroy((struct pw_proxy *)e->proxy);
-	g_clear_object(&e->box);
 	g_free(e);
 }
 
@@ -102,15 +114,10 @@ static const struct pw_proxy_events proxy_events = {
 
 /* ---- registry ----------------------------------------------------------- */
 
-/* WHICH NODES ARE SEGMENTS. Exactly the ones carrying `reac.segment`, because
- * reac-pw stamps that key on the node that IS the segment's door and on no
- * other: the master role's Audio/Sink, or — when we are the segment's slave and
- * no sink exists — the Audio/Source. Keying on the node NAME instead would miss
- * a segment the moment the role swapped, which is the case this key exists for.
- *
- * The media.class then says which of the two we got, and that is the difference
- * between a segment whose preamps we can move and one whose preamps belong to
- * whoever is mastering it. */
+/* BIND EVERY NODE. Which nodes are segments is decided in on_node_info, because
+ * `reac.segment` is not in the registry's global props — filtering here on it
+ * finds nothing at all, on a graph full of stageboxes. Binding a node is cheap
+ * and it is what `pw-dump` does for the same reason. */
 static void on_registry_global(void *data, uint32_t id,
                                uint32_t permissions G_GNUC_UNUSED,
                                const char *type, uint32_t version G_GNUC_UNUSED,
@@ -118,13 +125,12 @@ static void on_registry_global(void *data, uint32_t id,
 {
 	RsPw *self = data;
 
-	if (!props || !type || !spa_streq(type, PW_TYPE_INTERFACE_Node))
+	if (!rs_walk_should_bind(type))
 		return;
-	const char *segment = spa_dict_lookup(props, RS_PROP_SEGMENT);
-	if (!segment || !*segment)
+	if (g_hash_table_contains(self->nodes, GUINT_TO_POINTER(id)))
 		return;
-	const char *media_class = spa_dict_lookup(props, PW_KEY_MEDIA_CLASS);
-	gboolean is_sink = media_class && spa_streq(media_class, "Audio/Sink");
+
+	rs_walk_global(self->walk, id, props);
 
 	struct pw_node *proxy = pw_registry_bind(self->registry, id,
 	                                         PW_TYPE_INTERFACE_Node,
@@ -136,31 +142,23 @@ static void on_registry_global(void *data, uint32_t id,
 	e->owner = self;
 	e->id = id;
 	e->proxy = proxy;
-	e->box = rs_box_new(id, segment, is_sink);
-	/* The registry's own dict already carries the create-time badge, so the
-	 * sidebar is correct before the first info event rather than briefly blank. */
-	rs_box_update_from_dict(e->box, props);
 
 	pw_node_add_listener(proxy, &e->listener, &node_events, e);
 	pw_proxy_add_listener((struct pw_proxy *)proxy, &e->proxy_listener,
 	                      &proxy_events, e);
 
 	g_hash_table_insert(self->nodes, GUINT_TO_POINTER(id), e);
-	g_ptr_array_add(self->boxes, e->box);
-	g_signal_emit(self, signals[SIG_BOX_ADDED], 0, e->box);
 }
 
 static void on_registry_global_remove(void *data, uint32_t id)
 {
 	RsPw *self = data;
-	NodeEntry *e = g_hash_table_lookup(self->nodes, GUINT_TO_POINTER(id));
-	if (!e)
+	if (!g_hash_table_contains(self->nodes, GUINT_TO_POINTER(id)))
 		return;
-	RsBox *box = g_object_ref(e->box);
-	g_ptr_array_remove_fast(self->boxes, e->box);
+	/* The walk emits ::box-removed only if this node was a segment; an ordinary
+	 * node leaving the graph is not news. */
+	rs_walk_remove(self->walk, id);
 	g_hash_table_remove(self->nodes, GUINT_TO_POINTER(id));
-	g_signal_emit(self, signals[SIG_BOX_REMOVED], 0, box);
-	g_object_unref(box);
 }
 
 static const struct pw_registry_events registry_events = {
@@ -179,10 +177,42 @@ static void on_core_error(void *data, uint32_t id, int seq, int res,
 		g_signal_emit(self, signals[SIG_DISCONNECTED], 0);
 }
 
+/* The server has finished everything queued before `seq`. This is what makes
+ * `--list` a measurement rather than a guess: no sleep, no "probably settled". */
+static void on_core_done(void *data, uint32_t id, int seq)
+{
+	RsPw *self = data;
+	if (id != PW_ID_CORE || seq != self->sync_seq || !self->sync_cb)
+		return;
+	RsPwSyncFn cb = self->sync_cb;
+	gpointer ud = self->sync_data;
+	self->sync_cb = NULL;
+	self->sync_data = NULL;
+	cb(self, ud);
+}
+
 static const struct pw_core_events core_events = {
 	PW_VERSION_CORE_EVENTS,
+	.done = on_core_done,
 	.error = on_core_error,
 };
+
+/* ---- the walk's findings, as signals ------------------------------------ */
+
+static void on_walk_added(RsBox *box, gpointer user_data)
+{
+	g_signal_emit(RS_PW(user_data), signals[SIG_BOX_ADDED], 0, box);
+}
+
+static void on_walk_changed(RsBox *box, gpointer user_data)
+{
+	g_signal_emit(RS_PW(user_data), signals[SIG_BOX_CHANGED], 0, box);
+}
+
+static void on_walk_removed(RsBox *box, gpointer user_data)
+{
+	g_signal_emit(RS_PW(user_data), signals[SIG_BOX_REMOVED], 0, box);
+}
 
 /* ---- the loop, driven from GLib ---------------------------------------- */
 
@@ -204,7 +234,7 @@ static void rs_pw_dispose(GObject *object)
 
 	g_clear_handle_id(&self->fd_source, g_source_remove);
 	g_clear_pointer(&self->nodes, g_hash_table_unref);
-	g_clear_pointer(&self->boxes, g_ptr_array_unref);
+	g_clear_pointer(&self->walk, rs_walk_free);
 
 	if (self->registry) {
 		spa_hook_remove(&self->registry_listener);
@@ -246,7 +276,7 @@ static void rs_pw_init(RsPw *self)
 {
 	self->nodes = g_hash_table_new_full(g_direct_hash, g_direct_equal,
 	                                    NULL, node_entry_free);
-	self->boxes = g_ptr_array_new();
+	self->walk = rs_walk_new(on_walk_added, on_walk_changed, on_walk_removed, self);
 }
 
 RsPw *rs_pw_new(GError **error)
@@ -300,7 +330,22 @@ RsPw *rs_pw_new(GError **error)
 GPtrArray *rs_pw_boxes(RsPw *self)
 {
 	g_return_val_if_fail(RS_IS_PW(self), NULL);
-	return self->boxes;
+	return rs_walk_boxes(self->walk);
+}
+
+guint rs_pw_n_bound_nodes(RsPw *self)
+{
+	g_return_val_if_fail(RS_IS_PW(self), 0);
+	return rs_walk_n_bound(self->walk);
+}
+
+void rs_pw_sync(RsPw *self, RsPwSyncFn cb, gpointer user_data)
+{
+	g_return_if_fail(RS_IS_PW(self));
+	g_return_if_fail(cb != NULL);
+	self->sync_cb = cb;
+	self->sync_data = user_data;
+	self->sync_seq = pw_core_sync(self->core, PW_ID_CORE, 0);
 }
 
 gboolean rs_pw_write_headamp(RsPw *self, RsBox *box, int box_input,

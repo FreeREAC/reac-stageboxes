@@ -48,6 +48,17 @@ RsBox      *rs_box_new(uint32_t id, const char *segment, gboolean is_sink_door);
 gboolean    rs_box_update_from_dict(RsBox *self, const struct spa_dict *props);
 
 uint32_t    rs_box_id(RsBox *self);
+
+/* Point this box at the node that is now its DOOR — the node a write is
+ * addressed to and the node its properties are read from. A segment can have
+ * two nodes in the graph carrying its name (reac-pw 1.0.5 stamps `reac.segment`
+ * on both the master's sink and its capture source), and they do not publish the
+ * same thing: only the sink carries the head-amp capability, the base and the
+ * readback, while the source publishes `channels=0` and `base=none`. Merging
+ * both into one box would let the source's empties overwrite the sink's answers,
+ * so a box reads from its door and from nothing else, and a sink door always
+ * wins over a source one. */
+void        rs_box_set_door(RsBox *self, uint32_t id, gboolean is_sink_door);
 const char *rs_box_segment(RsBox *self);
 gboolean    rs_box_is_sink_door(RsBox *self);
 const char *rs_box_model(RsBox *self);          /* "none" until recognised */

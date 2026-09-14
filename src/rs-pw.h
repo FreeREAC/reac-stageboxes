@@ -44,6 +44,20 @@ RsPw *rs_pw_new(GError **error);
  * by the RsPw. */
 GPtrArray *rs_pw_boxes(RsPw *self);
 
+/* How many nodes have been bound, segment or not. A caller that finds no boxes
+ * needs this to tell "looked at a graph full of nodes and none was a segment"
+ * from "looked at nothing" — the two read identically otherwise, and an empty
+ * search that is really a broken search is the failure this exists to expose. */
+guint rs_pw_n_bound_nodes(RsPw *self);
+
+/* A core roundtrip: `cb` fires once the server has delivered everything queued
+ * before the call. Two of these in sequence are what a headless caller needs —
+ * the first completes when every global has arrived and every bind has been
+ * sent, the second when those binds' info events have come back. A sleep is not
+ * a substitute: it reports "settled" whether or not anything was delivered. */
+typedef void (*RsPwSyncFn)(RsPw *self, gpointer user_data);
+void rs_pw_sync(RsPw *self, RsPwSyncFn cb, gpointer user_data);
+
 /* Write one head-amp cell to `box`'s node. Returns FALSE, with `error` set,
  * when the write could not even be ATTEMPTED — no control door, no wire
  * address, a value the daemon's parse would drop. TRUE means the pod went to

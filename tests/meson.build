@@ -29,3 +29,14 @@ test_box_model = executable('test_box_model',
   include_directories : include_directories('../src'),
   dependencies : [glib_dep, gobject_dep, spa_dep])
 test('box-model', test_box_model)
+
+# The registry walk, driven by a FAKE REGISTRY whose `global` events carry only
+# the subset a real one carries — node.name, media.class, object.serial — with
+# every reac.* key arriving in the node's `info` event after the bind. This is
+# the regression: filtering on reac.segment at global time found zero segments
+# on a graph carrying twelve.
+test_registry_walk = executable('test_registry_walk',
+  ['test_registry_walk.c'] + walk_sources + box_sources + headamp_sources,
+  include_directories : include_directories('../src'),
+  dependencies : [glib_dep, gobject_dep, spa_dep])
+test('registry-walk', test_registry_walk)
