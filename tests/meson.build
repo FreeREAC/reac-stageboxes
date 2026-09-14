@@ -40,3 +40,27 @@ test_registry_walk = executable('test_registry_walk',
   include_directories : include_directories('../src'),
   dependencies : [glib_dep, gobject_dep, spa_dep])
 test('registry-walk', test_registry_walk)
+
+# EVERY USER-VISIBLE STRING IS IN THE CATALOGUE. Re-extracts the template from
+# POTFILES, refuses a source string the committed .pot has not got, and requires
+# msgcmp to find nothing untranslated in any catalogue. A string added without
+# _() has no symptom at all: the program runs and prints English.
+test('i18n-complete', find_program('i18n-complete.sh'),
+  args : [meson.project_source_root()])
+
+# THE CATALOGUE IS ACTUALLY BOUND, from the build tree. The operator's Catalan
+# desktop got an English window with complete translations and a correct install
+# path, because an uninstalled run bound the install locale dir. Only running the
+# binary can see that; this runs it with LANGUAGE=ca against the catalogues meson
+# just built, and carries a negative control against the English run.
+test('i18n-catalan', find_program('i18n-catalan.sh'),
+  args : [reac_stageboxes_exe, meson.project_build_root() / 'po'],
+  depends : [reac_stageboxes_exe])
+
+# NO USER-VISIBLE STRING ESCAPES THE CATALOGUE. i18n-complete cannot see this:
+# a string never wrapped in _() is absent from both the re-extracted template
+# and the committed one, so they agree and it passes while the operator reads
+# English. Found by sabotage — a printf() added to the list output went green
+# through the whole i18n suite. This reads the SOURCES instead.
+test('i18n-no-bare-strings', find_program('i18n-no-bare-strings.py'),
+  args : [meson.project_source_root() / 'src'])

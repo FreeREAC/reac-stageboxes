@@ -3,6 +3,7 @@
 
 #include "rs-list.h"
 
+#include <glib/gi18n.h>
 #include <stdio.h>
 
 #include "rs-headamp.h"
@@ -14,44 +15,60 @@ typedef struct {
 	int         rounds_left;
 } ListRun;
 
+/* An UNSET cell prints as a dash, never as "off". The daemon asserting nothing
+ * for a channel is not the same as the daemon asserting zero, and printing one
+ * as the other is how a readback becomes a lie. The dash is not translated: it
+ * means "no answer" in every language. */
 static const char *onoff(int v)
 {
-	/* An UNSET cell prints as a dash, never as "off". The daemon asserting
-	 * nothing for a channel is not the same as the daemon asserting zero, and
-	 * printing one as the other is how a readback becomes a lie. */
 	if (v < 0)
 		return "—";
-	return v ? "on" : "off";
+	return v ? _("on") : _("off");
+}
+
+/* An empty published string means the box has not answered that poll yet — a
+ * fact, and not a blank field. */
+static const char *answered(const char *s)
+{
+	return (s && *s) ? s : _("(unanswered)");
 }
 
 static void print_box(RsBox *box)
 {
 	enum rs_avail avail = rs_box_availability(box);
 
-	printf("segment %-16s door=%-6s model=%-14s width=%-6s link=%-12s\n",
-	       rs_box_segment(box),
-	       rs_box_is_sink_door(box) ? "sink" : "source",
-	       rs_box_model(box), rs_box_width(box), rs_box_link_state(box));
+	printf(_("segment %s — %s %s, link %s, door %s\n"),
+	       rs_box_segment(box), rs_box_model(box), rs_box_width(box),
+	       rs_box_link_state(box),
+	       rs_box_is_sink_door(box) ? _("sink") : _("source"));
 
 	if (rs_box_base(box) >= 0)
-		printf("        base=%d channels=%d caps=%s sens.max=%d%s\n",
+		printf(_("  base %d · %d inputs · caps %s · sensitivity max %d%s\n"),
 		       rs_box_base(box), rs_box_channels(box),
-		       *rs_box_caps(box) ? rs_box_caps(box) : "(none)",
+		       *rs_box_caps(box) ? rs_box_caps(box) : _("(none)"),
 		       rs_box_sens_max(box),
-		       rs_box_sens_max_published(box) ? "" : " (assumed)");
+		       rs_box_sens_max_published(box) ? "" : _(" (assumed)"));
 	else
-		printf("        base=none channels=%d caps=%s\n",
+		printf(_("  no base · %d inputs · caps %s\n"),
 		       rs_box_channels(box),
-		       *rs_box_caps(box) ? rs_box_caps(box) : "(none)");
+		       *rs_box_caps(box) ? rs_box_caps(box) : _("(none)"));
 
-	printf("        mac=%s fw=%s reac=%s master=%s refused=%s readback=%s -> %s\n",
+	printf(_("  mac %s · firmware %s · REAC %s · master %s · refused %s · readback %s\n"),
 	       rs_box_mac(box),
-	       *rs_box_firmware(box) ? rs_box_firmware(box) : "(unanswered)",
-	       *rs_box_reac_version(box) ? rs_box_reac_version(box) : "(unanswered)",
+	       answered(rs_box_firmware(box)),
+	       answered(rs_box_reac_version(box)),
 	       rs_box_master_state(box),
-	       rs_box_refused(box) ? rs_box_refused(box) : "(absent)",
-	       rs_box_has_readback(box) ? "yes" : "no",
-	       rs_avail_id(avail));
+	       rs_box_refused(box) ? rs_box_refused(box) : _("(not published)"),
+	       rs_box_has_readback(box) ? _("yes") : _("no"));
+
+	/* The status line carries the SENTENCE the window shows, not a code, so a
+	 * terminal and the page agree word for word; the untranslated id rides
+	 * along in brackets for a log or a bug report. */
+	const char *why = rs_avail_sentence(avail);
+	if (why)
+		printf(_("  status: %s [%s]\n"), why, rs_avail_id(avail));
+	else
+		printf(_("  status: preamps ready [%s]\n"), rs_avail_id(avail));
 
 	int channels = rs_box_channels(box);
 	for (int i = 1; i <= channels; i++) {
@@ -60,13 +77,16 @@ static void print_box(RsBox *box)
 		int pad     = rs_box_asserted(box, i, RS_HEADAMP_PAD);
 		int sens    = rs_box_asserted(box, i, RS_HEADAMP_SENS);
 
-		printf("          in %2d  ch %3d  phantom=%-3s pad=%-3s sens=",
-		       i, ch, onoff(phantom), onoff(pad));
+		g_autofree char *sens_str = NULL;
 		if (sens < 0)
-			printf("—\n");
+			sens_str = g_strdup("—");
 		else
-			printf("%-2d (%d dBu)\n", sens,
-			       rs_headamp_sens_dbu(sens, pad > 0, rs_box_sens_max(box)));
+			sens_str = g_strdup_printf(_("%d (%d dBu)"), sens,
+			                           rs_headamp_sens_dbu(sens, pad > 0,
+			                                               rs_box_sens_max(box)));
+
+		printf(_("    input %2d  wire channel %3d  phantom %-4s  pad %-4s  sensitivity %s\n"),
+		       i, ch, onoff(phantom), onoff(pad), sens_str);
 	}
 	printf("\n");
 }
@@ -95,7 +115,8 @@ int rs_list_run(void)
 	g_autoptr(GError) error = NULL;
 	RsPw *pw = rs_pw_new(&error);
 	if (!pw) {
-		fprintf(stderr, "%s\n", error ? error->message : "could not connect to PipeWire");
+		fprintf(stderr, "%s\n",
+		        error ? error->message : _("Could not connect to PipeWire."));
 		return 1;
 	}
 
@@ -107,20 +128,23 @@ int rs_list_run(void)
 	GPtrArray *boxes = rs_pw_boxes(pw);
 	guint bound = rs_pw_n_bound_nodes(pw);
 
+	/* THE DENOMINATOR IS ALWAYS PRINTED. A walk that bound nothing and a graph
+	 * with no stageboxes in it produce the same empty list, and only this
+	 * number tells them apart. */
+	g_autofree char *nodes_str =
+	        g_strdup_printf(ngettext("%u node bound", "%u nodes bound", bound), bound);
+
 	if (!boxes || boxes->len == 0) {
-		/* THE DENOMINATOR IS PRINTED. A walk that bound nothing and a graph
-		 * with no stageboxes in it produce the same empty list, and only this
-		 * number tells them apart. */
-		printf("no REAC segments found (%u node%s bound)\n",
-		       bound, bound == 1 ? "" : "s");
+		printf(_("No REAC segments found (%s).\n"), nodes_str);
 		g_object_unref(pw);
 		return 1;
 	}
 
 	g_ptr_array_sort(boxes, by_segment);
-	printf("%u REAC segment%s (%u node%s bound)\n\n",
-	       boxes->len, boxes->len == 1 ? "" : "s",
-	       bound, bound == 1 ? "" : "s");
+	g_autofree char *segs_str =
+	        g_strdup_printf(ngettext("%u REAC segment", "%u REAC segments", boxes->len),
+	                        boxes->len);
+	printf(_("%s (%s).\n\n"), segs_str, nodes_str);
 	for (guint i = 0; i < boxes->len; i++)
 		print_box(g_ptr_array_index(boxes, i));
 

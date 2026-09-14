@@ -91,6 +91,18 @@ int         rs_box_wire_ch(RsBox *self, int box_input);
 
 enum rs_avail rs_box_availability(RsBox *self);
 
+/* The reason a segment's preamps cannot be moved, as a sentence in the
+ * operator's language — NULL when they can. It lives here, beside the rule that
+ * decides it, so the window and `--list` say the same thing in the same words;
+ * two surfaces phrasing the same refusal differently is how an operator learns
+ * to distrust both. */
+const char *rs_avail_sentence(enum rs_avail a);
+
+/* The daemon's refusal code, said plainly. NULL for "none" and for an absent
+ * code. A code this application has not been taught is shown VERBATIM rather
+ * than swallowed: it is still the daemon's answer. Free with g_free. */
+char *rs_refusal_sentence(const char *code);
+
 /* A one-line sidebar subtitle: model, width, firmware · REAC version. Free with
  * g_free. Translated through the caller's domain. */
 char       *rs_box_subtitle(RsBox *self);

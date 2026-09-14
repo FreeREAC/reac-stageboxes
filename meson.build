@@ -63,7 +63,7 @@ app_sources = headamp_sources + props_sources + box_sources + walk_sources + fil
   'src/rs-window.c',
 )
 
-executable('reac-stageboxes',
+reac_stageboxes_exe = executable('reac-stageboxes',
   app_sources,
   c_args : config_args,
   include_directories : include_directories('src'),

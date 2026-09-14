@@ -260,3 +260,46 @@ char *rs_box_subtitle(RsBox *self)
 		g_string_append_printf(s, " · %s %s", _("REAC"), self->reac_version);
 	return g_string_free(s, FALSE);
 }
+
+/* ---- the reason sentences ----------------------------------------------- */
+
+/* One sentence per unavailability, in the operator's terms, each naming what is
+ * true rather than what failed. `box-master` is deliberately not phrased as an
+ * error: it is the contract of that mode. */
+const char *rs_avail_sentence(enum rs_avail a)
+{
+	switch (a) {
+	case RS_AVAIL_OK:
+		return NULL;
+	case RS_AVAIL_NO_CONTROL_DOOR:
+		return _("Another master owns this segment, so there is no preamp control here.");
+	case RS_AVAIL_BOX_MASTER:
+		return _("This box is strapped to REAC master mode. Its preamps are set on the box itself, over its serial port — REAC carries no preamp control to a box in master mode.");
+	case RS_AVAIL_NO_BOX:
+		return _("No stagebox recognised on this segment yet.");
+	case RS_AVAIL_NO_BASE:
+		return _("The box has announced no head-amp base, so its inputs have no wire address.");
+	case RS_AVAIL_NOT_ESTABLISHED:
+		return _("The link to this box is not established.");
+	case RS_AVAIL_NO_READBACK:
+		return _("No readback from this daemon: it publishes no head-amp state, so a change could not be confirmed. Shown read-only.");
+	}
+	return NULL;
+}
+
+char *rs_refusal_sentence(const char *code)
+{
+	if (!code || !*code || g_str_equal(code, RS_REFUSED_NONE))
+		return NULL;
+	if (g_str_equal(code, RS_REFUSED_BOX_MASTER))
+		return g_strdup(_("Refused: the box is in master mode."));
+	if (g_str_equal(code, "no-box"))
+		return g_strdup(_("Refused: no box on this segment."));
+	if (g_str_equal(code, "no-base"))
+		return g_strdup(_("Refused: no wire address for this box."));
+	if (g_str_equal(code, "bad-key"))
+		return g_strdup(_("Refused: the daemon did not recognise that control."));
+	if (g_str_equal(code, "out-of-range"))
+		return g_strdup(_("Refused: that value is out of range."));
+	return g_strdup_printf(_("Refused by the daemon: %s"), code);
+}

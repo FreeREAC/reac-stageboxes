@@ -85,6 +85,20 @@ Anyone in the session can write, because reac-pw is a user service on the user's
 PipeWire socket — the same permission any application has over any device's
 volume.
 
+## Translations
+
+English and Catalan (`po/`). The interface and `--list` both go through the same
+catalogue, so a Catalan session gets Catalan in the window and in the terminal.
+
+A binary run from the build tree finds the catalogues meson built beside it, so
+`LANGUAGE=ca b/reac-stageboxes --list` is Catalan without installing anything.
+`REAC_STAGEBOXES_LOCALEDIR` overrides the search when you want to point it at
+another tree; an installed binary falls back to its configured `localedir`.
+
+Adding a string means wrapping it in `_()` and translating it in every
+catalogue: `meson test` fails otherwise, both on a string that never reached the
+template and on a template entry no catalogue translates.
+
 ## Licence
 
 GPL-3.0-or-later. Copyright (C) 2026 Pau Aliagas <linuxnow@gmail.com>.

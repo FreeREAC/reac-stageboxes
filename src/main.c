@@ -20,6 +20,55 @@
 #include "rs-pw.h"
 #include "rs-window.h"
 
+/* WHERE THE CATALOGUES ARE.
+ *
+ * `LOCALEDIR` is the installed path, and it is right for an installed binary and
+ * wrong for every other way this program is ever run. A build-tree run —
+ * `b/reac-stageboxes`, which is how it is tested and how it was first shown to
+ * the operator — binds a directory that holds no .mo at all, so gettext falls
+ * back to the msgids and a Catalan desktop gets an English window. Nothing
+ * fails, nothing is logged: the untranslated string IS the fallback.
+ *
+ * So the search is: an explicit override first, then the catalogues meson built
+ * beside this binary, then the installed path. Each candidate is accepted only
+ * if a catalogue is actually THERE — a directory that exists but holds no .mo
+ * would silently swallow the next candidate. */
+static const char *locale_dir(void)
+{
+	static char *resolved;
+	if (resolved)
+		return resolved;
+
+	/* Documented for developers: point it anywhere, e.g. at another build tree. */
+	const char *env = g_getenv("REAC_STAGEBOXES_LOCALEDIR");
+	if (env && *env) {
+		resolved = g_strdup(env);
+		return resolved;
+	}
+
+	/* Uninstalled: meson's i18n.gettext() writes
+	 * <builddir>/po/<lang>/LC_MESSAGES/<domain>.mo, and the binary sits at
+	 * <builddir>/reac-stageboxes. */
+	g_autofree char *exe = g_file_read_link("/proc/self/exe", NULL);
+	if (exe) {
+		g_autofree char *dir = g_path_get_dirname(exe);
+		g_autofree char *candidate = g_build_filename(dir, "po", NULL);
+		/* Probe for a catalogue, not for the directory: an empty `po/` would
+		 * otherwise shadow the installed one. Catalan is the probe because it
+		 * is the translation this must not lose; `en` would pass on a build
+		 * that dropped `ca`. */
+		g_autofree char *probe = g_build_filename(candidate, "ca", "LC_MESSAGES",
+		                                          GETTEXT_PACKAGE ".mo", NULL);
+		if (g_file_test(probe, G_FILE_TEST_EXISTS)) {
+			resolved = g_steal_pointer(&candidate);
+			return resolved;
+		}
+	}
+
+	resolved = g_strdup(LOCALEDIR);
+	return resolved;
+}
+
 static void on_activate(GApplication *app, gpointer user_data G_GNUC_UNUSED)
 {
 	GtkWindow *existing = gtk_application_get_active_window(GTK_APPLICATION(app));
@@ -44,7 +93,7 @@ static void on_activate(GApplication *app, gpointer user_data G_GNUC_UNUSED)
 int main(int argc, char **argv)
 {
 	setlocale(LC_ALL, "");
-	bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
+	bindtextdomain(GETTEXT_PACKAGE, locale_dir());
 	bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
 	textdomain(GETTEXT_PACKAGE);
 

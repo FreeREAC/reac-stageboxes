@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: reac-stageboxes 0.1.0\n"
 "Report-Msgid-Bugs-To: linuxnow@gmail.com\n"
 "POT-Creation-Date: 2026-09-14 12:00+0200\n"
-"PO-Revision-Date: 2026-09-14 12:00+0200\n"
+"PO-Revision-Date: 2026-09-14 18:00+0200\n"
 "Last-Translator: Pau Aliagas <linuxnow@gmail.com>\n"
 "Language-Team: English\n"
 "Language: en\n"
@@ -17,10 +17,290 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 
-#: data/org.freereac.Stageboxes.desktop.in:3 src/rs-window.c:337
-#: src/rs-window.c:492 src/rs-window.c:548
+#: src/rs-box.c:258
+msgid "fw"
+msgstr "fw"
+
+#: src/rs-box.c:260
+msgid "REAC"
+msgstr "REAC"
+
+#: src/rs-box.c:275
+msgid "Another master owns this segment, so there is no preamp control here."
+msgstr "Another master owns this segment, so there is no preamp control here."
+
+#: src/rs-box.c:277
+msgid ""
+"This box is strapped to REAC master mode. Its preamps are set on the box "
+"itself, over its serial port — REAC carries no preamp control to a box in "
+"master mode."
+msgstr "This box is strapped to REAC master mode. Its preamps are set on the box itself, over its serial port — REAC carries no preamp control to a box in master mode."
+
+#: src/rs-box.c:279
+msgid "No stagebox recognised on this segment yet."
+msgstr "No stagebox recognised on this segment yet."
+
+#: src/rs-box.c:281
+msgid ""
+"The box has announced no head-amp base, so its inputs have no wire address."
+msgstr "The box has announced no head-amp base, so its inputs have no wire address."
+
+#: src/rs-box.c:283
+msgid "The link to this box is not established."
+msgstr "The link to this box is not established."
+
+#: src/rs-box.c:285
+msgid ""
+"No readback from this daemon: it publishes no head-amp state, so a change "
+"could not be confirmed. Shown read-only."
+msgstr "No readback from this daemon: it publishes no head-amp state, so a change could not be confirmed. Shown read-only."
+
+#: src/rs-box.c:295
+msgid "Refused: the box is in master mode."
+msgstr "Refused: the box is in master mode."
+
+#: src/rs-box.c:297
+msgid "Refused: no box on this segment."
+msgstr "Refused: no box on this segment."
+
+#: src/rs-box.c:299
+msgid "Refused: no wire address for this box."
+msgstr "Refused: no wire address for this box."
+
+#: src/rs-box.c:301
+msgid "Refused: the daemon did not recognise that control."
+msgstr "Refused: the daemon did not recognise that control."
+
+#: src/rs-box.c:303
+msgid "Refused: that value is out of range."
+msgstr "Refused: that value is out of range."
+
+#: src/rs-box.c:304
+#, c-format
+msgid "Refused by the daemon: %s"
+msgstr "Refused by the daemon: %s"
+
+#: src/rs-list.c:26
+msgid "on"
+msgstr "on"
+
+#: src/rs-list.c:26
+msgid "off"
+msgstr "off"
+
+#: src/rs-list.c:33
+msgid "(unanswered)"
+msgstr "(unanswered)"
+
+#: src/rs-list.c:40
+#, c-format
+msgid "segment %s — %s %s, link %s, door %s\n"
+msgstr "segment %s — %s %s, link %s, door %s\n"
+
+#: src/rs-list.c:43
+msgid "sink"
+msgstr "sink"
+
+#: src/rs-list.c:43
+msgid "source"
+msgstr "source"
+
+#: src/rs-list.c:46
+#, c-format
+msgid "  base %d · %d inputs · caps %s · sensitivity max %d%s\n"
+msgstr "  base %d · %d inputs · caps %s · sensitivity max %d%s\n"
+
+#: src/rs-list.c:48 src/rs-list.c:54
+msgid "(none)"
+msgstr "(none)"
+
+#: src/rs-list.c:50
+msgid " (assumed)"
+msgstr " (assumed)"
+
+#: src/rs-list.c:52
+#, c-format
+msgid "  no base · %d inputs · caps %s\n"
+msgstr "  no base · %d inputs · caps %s\n"
+
+#: src/rs-list.c:56
+#, c-format
+msgid ""
+"  mac %s · firmware %s · REAC %s · master %s · refused %s · readback %s\n"
+msgstr "  mac %s · firmware %s · REAC %s · master %s · refused %s · readback %s\n"
+
+#: src/rs-list.c:61
+msgid "(not published)"
+msgstr "(not published)"
+
+#: src/rs-list.c:62
+msgid "yes"
+msgstr "yes"
+
+#: src/rs-list.c:62
+msgid "no"
+msgstr "no"
+
+#: src/rs-list.c:69
+#, c-format
+msgid "  status: %s [%s]\n"
+msgstr "  status: %s [%s]\n"
+
+#: src/rs-list.c:71
+#, c-format
+msgid "  status: preamps ready [%s]\n"
+msgstr "  status: preamps ready [%s]\n"
+
+#: src/rs-list.c:84
+#, c-format
+msgid "%d (%d dBu)"
+msgstr "%d (%d dBu)"
+
+#: src/rs-list.c:88
+#, c-format
+msgid ""
+"    input %2d  wire channel %3d  phantom %-4s  pad %-4s  sensitivity %s\n"
+msgstr "    input %2d  wire channel %3d  phantom %-4s  pad %-4s  sensitivity %s\n"
+
+#: src/rs-list.c:119
+msgid "Could not connect to PipeWire."
+msgstr "Could not connect to PipeWire."
+
+#: src/rs-list.c:135
+#, c-format
+msgid "%u node bound"
+msgid_plural "%u nodes bound"
+msgstr[0] "%u node bound"
+msgstr[1] "%u nodes bound"
+
+#: src/rs-list.c:138
+#, c-format
+msgid "No REAC segments found (%s).\n"
+msgstr "No REAC segments found (%s).\n"
+
+#: src/rs-list.c:145
+#, c-format
+msgid "%u REAC segment"
+msgid_plural "%u REAC segments"
+msgstr[0] "%u REAC segment"
+msgstr[1] "%u REAC segments"
+
+#: src/rs-list.c:147
+#, c-format
+msgid ""
+"%s (%s).\n"
+"\n"
+msgstr "%s (%s).\n\n"
+
+#: src/rs-pw.c:289
+msgid "Could not create a PipeWire loop."
+msgstr "Could not create a PipeWire loop."
+
+#: src/rs-pw.c:299
+msgid "Could not create a PipeWire context."
+msgstr "Could not create a PipeWire context."
+
+#: src/rs-pw.c:309
+msgid "Could not connect to PipeWire. Is the session running?"
+msgstr "Could not connect to PipeWire. Is the session running?"
+
+#: src/rs-pw.c:318
+msgid "Could not read the PipeWire registry."
+msgstr "Could not read the PipeWire registry."
+
+#: src/rs-pw.c:362
+msgid "That stagebox has left the graph."
+msgstr "That stagebox has left the graph."
+
+#: src/rs-pw.c:367
+msgid "This segment has no control door: another master owns it."
+msgstr "This segment has no control door: another master owns it."
+
+#: src/rs-pw.c:376
+msgid "No wire address for this input: the box has announced no base."
+msgstr "No wire address for this input: the box has announced no base."
+
+#: src/rs-pw.c:385
+msgid "That value is outside what the daemon accepts."
+msgstr "That value is outside what the daemon accepts."
+
+#: src/rs-window.c:96
+msgid "Writing…"
+msgstr "Writing…"
+
+#: src/rs-window.c:139
+#, c-format
+msgid "%d dBu"
+msgstr "%d dBu"
+
+#: src/rs-window.c:162
+#, c-format
+msgid "Input %d"
+msgstr "Input %d"
+
+#: src/rs-window.c:183
+msgid "Phantom power (+48 V)"
+msgstr "Phantom power (+48 V)"
+
+#: src/rs-window.c:192
+msgid "Pad (−20 dB)"
+msgstr "Pad (−20 dB)"
+
+#: src/rs-window.c:201
+msgid "Sensitivity"
+msgstr "Sensitivity"
+
+#: src/rs-window.c:243
+#, c-format
+msgid "wire channel %d"
+msgstr "wire channel %d"
+
+#: src/rs-window.c:278
+msgid "No readback from this daemon."
+msgstr "No readback from this daemon."
+
+#: src/rs-window.c:280
+msgid "Nothing asserted for this input yet."
+msgstr "Nothing asserted for this input yet."
+
+#: src/rs-window.c:291 src/rs-window.c:446 src/rs-window.c:502
+#: data/org.freereac.Stageboxes.desktop.in:3
 msgid "REAC Stageboxes"
 msgstr "REAC Stageboxes"
+
+#: src/rs-window.c:330
+msgid "No box"
+msgstr "No box"
+
+#: src/rs-window.c:341
+msgid "slave"
+msgstr "slave"
+
+#: src/rs-window.c:469
+msgid "Stageboxes"
+msgstr "Stageboxes"
+
+#: src/rs-window.c:474
+msgid "Inputs"
+msgstr "Inputs"
+
+#: src/rs-window.c:485
+msgid "No PipeWire session"
+msgstr "No PipeWire session"
+
+#: src/rs-window.c:488
+msgid "No stageboxes"
+msgstr "No stageboxes"
+
+#: src/rs-window.c:490
+msgid ""
+"No REAC segment is present in the PipeWire graph. reac-pw publishes one node "
+"per segment; a segment appears here as soon as it does."
+msgstr "No REAC segment is present in the PipeWire graph. reac-pw publishes one node per segment; a segment appears here as soon as it does."
+
+#: src/rs-window.c:512
+msgid "Preamps"
+msgstr "Preamps"
 
 #: data/org.freereac.Stageboxes.desktop.in:4
 msgid "Set phantom power, pad and sensitivity on every REAC stagebox preamp"
@@ -29,171 +309,3 @@ msgstr "Set phantom power, pad and sensitivity on every REAC stagebox preamp"
 #: data/org.freereac.Stageboxes.desktop.in:9
 msgid "REAC;stagebox;preamp;phantom;pad;gain;Roland;PipeWire;"
 msgstr "REAC;stagebox;preamp;phantom;pad;gain;Roland;PipeWire;"
-
-#: src/rs-box.c:251
-msgid "fw"
-msgstr "fw"
-
-#: src/rs-box.c:253
-msgid "REAC"
-msgstr "REAC"
-
-#: src/rs-pw.c:258
-msgid "Could not create a PipeWire loop."
-msgstr "Could not create a PipeWire loop."
-
-#: src/rs-pw.c:268
-msgid "Could not create a PipeWire context."
-msgstr "Could not create a PipeWire context."
-
-#: src/rs-pw.c:278
-msgid "Could not connect to PipeWire. Is the session running?"
-msgstr "Could not connect to PipeWire. Is the session running?"
-
-#: src/rs-pw.c:287
-msgid "Could not read the PipeWire registry."
-msgstr "Could not read the PipeWire registry."
-
-#: src/rs-pw.c:316
-msgid "That stagebox has left the graph."
-msgstr "That stagebox has left the graph."
-
-#: src/rs-pw.c:321
-msgid "This segment has no control door: another master owns it."
-msgstr "This segment has no control door: another master owns it."
-
-#: src/rs-pw.c:330
-msgid "No wire address for this input: the box has announced no base."
-msgstr "No wire address for this input: the box has announced no base."
-
-#: src/rs-pw.c:339
-msgid "That value is outside what the daemon accepts."
-msgstr "That value is outside what the daemon accepts."
-
-#: src/rs-window.c:82
-msgid "Another master owns this segment, so there is no preamp control here."
-msgstr "Another master owns this segment, so there is no preamp control here."
-
-#: src/rs-window.c:84
-msgid ""
-"This box is strapped to REAC master mode. Its preamps are set on the box "
-"itself, over its serial port — REAC carries no preamp control to a box in "
-"master mode."
-msgstr "This box is strapped to REAC master mode. Its preamps are set on the box itself, over its serial port — REAC carries no preamp control to a box in master mode."
-
-#: src/rs-window.c:86
-msgid "No stagebox recognised on this segment yet."
-msgstr "No stagebox recognised on this segment yet."
-
-#: src/rs-window.c:88
-msgid ""
-"The box has announced no head-amp base, so its inputs have no wire address."
-msgstr "The box has announced no head-amp base, so its inputs have no wire address."
-
-#: src/rs-window.c:90
-msgid "The link to this box is not established."
-msgstr "The link to this box is not established."
-
-#: src/rs-window.c:92
-msgid ""
-"No readback from this daemon: it publishes no head-amp state, so a change "
-"could not be confirmed. Shown read-only."
-msgstr "No readback from this daemon: it publishes no head-amp state, so a change could not be confirmed. Shown read-only."
-
-#: src/rs-window.c:105
-msgid "Refused: the box is in master mode."
-msgstr "Refused: the box is in master mode."
-
-#: src/rs-window.c:107
-msgid "Refused: no box on this segment."
-msgstr "Refused: no box on this segment."
-
-#: src/rs-window.c:109
-msgid "Refused: no wire address for this box."
-msgstr "Refused: no wire address for this box."
-
-#: src/rs-window.c:111
-msgid "Refused: the daemon did not recognise that control."
-msgstr "Refused: the daemon did not recognise that control."
-
-#: src/rs-window.c:113
-msgid "Refused: that value is out of range."
-msgstr "Refused: that value is out of range."
-
-#: src/rs-window.c:114
-#, c-format
-msgid "Refused by the daemon: %s"
-msgstr "Refused by the daemon: %s"
-
-#: src/rs-window.c:142
-msgid "Writing…"
-msgstr "Writing…"
-
-#: src/rs-window.c:185
-#, c-format
-msgid "%d dBu"
-msgstr "%d dBu"
-
-#: src/rs-window.c:208
-#, c-format
-msgid "Input %d"
-msgstr "Input %d"
-
-#: src/rs-window.c:229
-msgid "Phantom power (+48 V)"
-msgstr "Phantom power (+48 V)"
-
-#: src/rs-window.c:238
-msgid "Pad (−20 dB)"
-msgstr "Pad (−20 dB)"
-
-#: src/rs-window.c:247
-msgid "Sensitivity"
-msgstr "Sensitivity"
-
-#: src/rs-window.c:289
-#, c-format
-msgid "wire channel %d"
-msgstr "wire channel %d"
-
-#: src/rs-window.c:324
-msgid "No readback from this daemon."
-msgstr "No readback from this daemon."
-
-#: src/rs-window.c:326
-msgid "Nothing asserted for this input yet."
-msgstr "Nothing asserted for this input yet."
-
-#: src/rs-window.c:376
-msgid "No box"
-msgstr "No box"
-
-#: src/rs-window.c:387
-msgid "slave"
-msgstr "slave"
-
-#: src/rs-window.c:515
-msgid "Stageboxes"
-msgstr "Stageboxes"
-
-#: src/rs-window.c:520
-msgid "Inputs"
-msgstr "Inputs"
-
-#: src/rs-window.c:531
-msgid "No PipeWire session"
-msgstr "No PipeWire session"
-
-#: src/rs-window.c:534
-msgid "No stageboxes"
-msgstr "No stageboxes"
-
-#: src/rs-window.c:536
-msgid ""
-"No REAC segment is present in the PipeWire graph. reac-pw publishes one node "
-"per segment; a segment appears here as soon as it does."
-msgstr "No REAC segment is present in the PipeWire graph. reac-pw publishes one node per segment; a segment appears here as soon as it does."
-
-#: src/rs-window.c:558
-msgid "Preamps"
-msgstr "Preamps"

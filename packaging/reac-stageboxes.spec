@@ -14,6 +14,11 @@ BuildRequires:  ninja-build
 BuildRequires:  gcc
 BuildRequires:  gettext
 BuildRequires:  desktop-file-utils
+# The i18n test runs the built binary under LANGUAGE=ca and requires Catalan out
+# of it. gettext IGNORES LANGUAGE when the locale is C, so without this langpack
+# the test cannot observe anything and skips — a build that reports success
+# while proving nothing about the translation it ships.
+BuildRequires:  glibc-langpack-ca
 BuildRequires:  pipewire-devel
 BuildRequires:  gtk4-devel
 BuildRequires:  libadwaita-devel
@@ -69,5 +74,5 @@ confirmed must not be shown as applied.
 %{_datadir}/icons/hicolor/scalable/apps/org.freereac.Stageboxes.svg
 
 %changelog
-* Sun Sep 14 2026 Pau Aliagas <linuxnow@gmail.com> - 0.1.0-1
+* Mon Sep 14 2026 Pau Aliagas <linuxnow@gmail.com> - 0.1.0-1
 - First package.
