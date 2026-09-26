@@ -1,0 +1,347 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Pau Aliagas <linuxnow@gmail.com>
+#
+# Release reac-stageboxes RPMs into the public FreeREAC dnf tree (issue #1, operator ruling
+# 2026-09-18: "a real CI release workflow, not a one-off manual build").
+#
+# THE PACKAGES ARE BUILT HERE, AT A RELEASE TAG, AND NOWHERE ELSE. No desk builds, signs or
+# publishes a reac-stageboxes RPM. A human dispatches this workflow with a tag, and that
+# choice is the decision in the path of every publish.
+#
+# Shaped after openmixer's .github/workflows/release-rpm.yml and FreeREAC/reac-pw's own
+# release-rpm.yml. This workflow calls the entry points, it does not rebuild their logic in
+# YAML:
+#
+#   build   packaging/build-rpm.sh     this repo's one build entry point. It refuses a tag
+#                                      whose version is not meson.build's own.
+#   repo    publish-repo.sh            FreeREAC/reac-pw's packaging/publish-repo.sh, from a
+#                                      checkout of that repository, UNMODIFIED. It sorts into
+#                                      rpm/fedora/<releasever>/<arch>/, runs rpmsign and
+#                                      createrepo_c, and detach-signs repomd.xml. A copy of it
+#                                      here would be a second publisher of one shared tree,
+#                                      drifting unseen.
+#
+# THE TREE. Operator ruling 2026-09-13, "everything public now": FreeREAC packages publish
+# into ONE public tree, FreeREAC/freereac.github.io, dir `rpm/`. libreac and reac-pw already
+# publish there, and this package `Requires: reac-pw`, so a console that installs it resolves
+# both from the same .repo. The private R2 bucket that openmixer's workflow names is RETIRED
+# for FreeREAC (reac-pw's workflow header records it). publish-repo.sh's defaults (repo id
+# `freereac`, base URL `https://freereac.github.io/rpm`) ARE that tree's identity, so nothing
+# here overrides them.
+#
+# workflow_dispatch ONLY. It never runs on push, and it never runs on a tag push.
+#
+# THE SHARED-TREE RACE (reac-pw's header has the full argument): three repositories push to
+# one branch of freereac.github.io. `concurrency:` cannot serialise across repositories.
+# `git push` refuses a non-fast-forward, and publish-repo.sh places files by NEVRA (the same
+# package is a no-op, nothing is ever removed), so a push that loses the race is safe to
+# re-dispatch. Publish one release, let it land, then publish the next.
+#
+# SECRETS, named and never valued. These are the same ones reac-pw's publisher uses. They are
+# repository secrets of THIS repository, or organisation secrets FreeREAC shares with it:
+#   RPM_GPG_KEY, RPM_GPG_PASSPHRASE   the FreeREAC signing key (fingerprint-checked below)
+#   FREEREAC_PAGES_TOKEN              fine-grained PAT, contents:write on freereac.github.io
+# With sign=false (the default) none of them is read, and the run is a dry run that publishes
+# nothing.
+
+name: Release reac-stageboxes RPM to the dnf repo
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build (must already exist, match v[0-9]*, and equal meson.build''s version, e.g. v0.1.0)'
+        required: true
+      sign:
+        description: 'Sign the package and the repo metadata, and publish. false runs publish-repo.sh --no-sign for a dry run that publishes nothing.'
+        type: boolean
+        default: false
+
+concurrency:
+  # Never cancel: a half-published tree is worse than a slow one. It serialises repeat
+  # dispatches of THIS workflow only; see the race note above.
+  group: release-rpm-${{ inputs.tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # The ONE place the shared publisher is named. main is where libreac's and reac-pw's own
+  # publishes take it from, so all three publishers run the same placement rules.
+  PUBLISHER_REPO: FreeREAC/reac-pw
+  PUBLISHER_REF: main
+
+jobs:
+  build:
+    name: Build reac-stageboxes RPM (fc${{ matrix.fedora }}, ${{ matrix.arch }})
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    container:
+      image: fedora:${{ matrix.fedora }}
+    strategy:
+      # The single entry the rig runs. A second Fedora or arch is a list edit.
+      fail-fast: false
+      matrix:
+        fedora: ['44']
+        arch: ['x86_64']
+    permissions:
+      # attaching the packages to the GitHub release (below)
+      contents: write
+    env:
+      # W004: never interpolate ${{ inputs.* }} into a run: block. Route it through env: first.
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - name: Refuse a tag that is not a RELEASE tag
+        # The same glob openmixer's and reac-pw's workflows enforce. A work marker became the
+        # published version once (openmixer #370), and RPM has no downgrade path.
+        run: |
+          set -eu
+          case "$RELEASE_TAG" in
+            v[0-9]*) echo "release tag: $RELEASE_TAG" ;;
+            *) echo "::error::'$RELEASE_TAG' does not match the release-tag glob v[0-9]*"; exit 1 ;;
+          esac
+
+      # actions/checkout needs git INSIDE the container, or it falls back to a tarball with no
+      # .git, and make-tarball.sh (git archive) and `git describe` both need a repository.
+      - name: git for the checkout
+        run: dnf install -y -q git
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Verify the tag is a tag, and names the version this build will publish
+        run: |
+          set -o pipefail
+          # The checkout is owned by a different uid than the container's shell. Without this,
+          # git refuses the repository ("dubious ownership").
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          # A BRANCH of the same name would also check out. Only a tag is a release.
+          git rev-parse -q --verify "refs/tags/$RELEASE_TAG" >/dev/null ||
+            { echo "::error::'$RELEASE_TAG' is not a tag in this repository"; exit 1; }
+          git describe --tags --exact-match HEAD ||
+            { echo '::error::HEAD is not exactly the release tag — see above'; exit 1; }
+          # The refusal lives in build-rpm.sh, so this step can never disagree with the build.
+          resolved="$(packaging/build-rpm.sh --check-version "${RELEASE_TAG#v}")"
+          echo "resolved version: $resolved"
+
+      - name: Install build dependencies (dnf builddep against the spec)
+        # Everything the spec builds and tests with comes from Fedora. reac-pw is a runtime
+        # Requires only, and nothing here installs the built package.
+        run: |
+          set -o pipefail
+          dnf install -y --setopt=install_weak_deps=False rpm-build rpmdevtools 'dnf-command(builddep)'
+          dnf builddep -y packaging/reac-stageboxes.spec
+
+      - name: Build the reac-stageboxes RPM
+        # %check runs the meson suite, so a red test fails the release here.
+        run: |
+          set -o pipefail
+          packaging/build-rpm.sh "${RELEASE_TAG#v}"
+
+      - name: Show what was built, and refuse an empty build
+        run: |
+          set -o pipefail
+          TOP=$(readlink -f "${RPM_TOPDIR:-$HOME/rpmbuild}")
+          find "$TOP/RPMS" "$TOP/SRPMS" -name '*.rpm' | sort | tee /tmp/built.txt
+          # A publish over an empty directory succeeds and publishes nothing. Count first.
+          test -s /tmp/built.txt || { echo "::error::no RPM was produced"; exit 1; }
+          echo "RPM_TOPDIR=$TOP" >> "$GITHUB_ENV"
+
+      # THE PACKAGES ARE ALSO RELEASE ASSETS. A run artifact expires in thirty days and needs a
+      # GitHub login to fetch. A Release asset does not. Idempotent: --clobber replaces what the
+      # same tag already carries.
+      - name: Attach the packages to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          command -v gh >/dev/null || dnf install -y -q gh
+          gh release view "$RELEASE_TAG" >/dev/null 2>&1 ||
+            gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --generate-notes
+          find "$RPM_TOPDIR/RPMS" "$RPM_TOPDIR/SRPMS" -name '*.rpm' | sort > /tmp/assets.txt
+          test -s /tmp/assets.txt || { echo "::error::no RPM to attach"; exit 1; }
+          xargs -a /tmp/assets.txt gh release upload "$RELEASE_TAG" --clobber
+          # and the source tarball the RPM was built from
+          T=$(find "$RPM_TOPDIR/SOURCES" -name 'reac-stageboxes-*.tar.gz' | head -1)
+          [ -n "$T" ] && gh release upload "$RELEASE_TAG" --clobber "$T"
+          echo "attached to $RELEASE_TAG:"; cat /tmp/assets.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reac-stageboxes-rpm-fc${{ matrix.fedora }}-${{ matrix.arch }}
+          path: |
+            ${{ env.RPM_TOPDIR }}/RPMS/**/*.rpm
+            ${{ env.RPM_TOPDIR }}/SRPMS/*.rpm
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Sign and publish into the public dnf repo tree
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: fedora:44
+    permissions:
+      contents: read
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+      # Signing is asked for, never assumed. The default dispatch is a dry run.
+      SIGN: ${{ inputs.sign }}
+    steps:
+      - name: Install packaging tools
+        # git: the pages checkout below commits and pushes. curl: fetches the public tree's key
+        # to check the signing key against it.
+        run: dnf install -y --setopt=install_weak_deps=False createrepo_c rpm-sign gnupg2 pinentry findutils git curl
+
+      - name: Checkout the shared publisher (reac-pw's packaging/publish-repo.sh)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.PUBLISHER_REPO }}
+          ref: ${{ env.PUBLISHER_REF }}
+          path: publisher
+          # publish-repo.sh reads packaging/ only (its repo templates beside it)
+          sparse-checkout: packaging
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: reac-stageboxes-rpm-*
+          merge-multiple: true
+          path: collected/
+
+      - name: Prove the artifacts arrived before anything signs them
+        run: |
+          set -o pipefail
+          find collected -name '*.rpm' | sort | tee /tmp/collected.txt
+          test -s /tmp/collected.txt || { echo "::error::no RPM was downloaded from the build job"; exit 1; }
+          # AND ONLY OURS. The shared publisher places whatever it is handed. This job must
+          # never be the path by which another project's package reaches the tree.
+          if grep -v '/reac-stageboxes-[^/]*\.rpm$' /tmp/collected.txt; then
+            echo "::error::a package that is not reac-stageboxes reached the publish job (above)"; exit 1
+          fi
+
+      - name: Import the signing key
+        if: env.SIGN == 'true'
+        env:
+          # Named, never valued. The SAME key libreac and reac-pw sign with: one gpgkey= line is
+          # baked into freereac.repo, so a second key would fail repo_gpgcheck=1 for one half.
+          GPG_KEY: ${{ secrets.RPM_GPG_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.RPM_GPG_PASSPHRASE }}
+        run: |
+          set -o pipefail
+          test -n "$GPG_KEY" || { echo "::error::RPM_GPG_KEY is not set; a signed publish cannot proceed"; exit 1; }
+          printf '%s\n' "$GPG_KEY" | gpg --batch --import
+          KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/ {print $10; exit}')
+          test -n "$KEY_ID" || { echo "::error::no secret key imported from RPM_GPG_KEY"; exit 1; }
+          echo "OMX_GPG_KEY_ID=$KEY_ID" >> "$GITHUB_ENV"
+          mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
+          echo 'allow-loopback-pinentry' >> ~/.gnupg/gpg-agent.conf
+          echo 'pinentry-mode loopback'  >> ~/.gnupg/gpg.conf
+          printf '%s' "$GPG_PASSPHRASE" > ~/.gnupg/passphrase
+          chmod 600 ~/.gnupg/passphrase
+          echo "passphrase-file $HOME/.gnupg/passphrase" >> ~/.gnupg/gpg.conf
+          gpgconf --kill gpg-agent || true
+
+      - name: Verify the signing key matches the public tree's published key
+        # The secret cannot be read, so its identity is proved by fingerprint against the key
+        # the tree it will sign INTO already publishes. Refuse before a single package is signed.
+        if: env.SIGN == 'true'
+        run: |
+          set -o pipefail
+          PUB_FPR=$(curl -fsSL https://freereac.github.io/rpm/RPM-GPG-KEY-freereac \
+            | gpg --batch --with-colons --dry-run --import-options import-show --import 2>/dev/null \
+            | awk -F: '/^fpr:/ {print $10; exit}')
+          test -n "$PUB_FPR" || { echo "::error::could not read a fingerprint from https://freereac.github.io/rpm/RPM-GPG-KEY-freereac"; exit 1; }
+          if [ "$PUB_FPR" != "$OMX_GPG_KEY_ID" ]; then
+            echo "::error::RPM_GPG_KEY (fingerprint $OMX_GPG_KEY_ID) is not the public tree's key ($PUB_FPR) -- refusing to sign."
+            exit 1
+          fi
+          echo "signing key matches the public tree's key: $OMX_GPG_KEY_ID"
+
+      - name: Require the public-pages token before touching the public tree
+        # Fails loud and BY NAME. A missing token must never become an anonymous checkout whose
+        # push fails later with no clue why.
+        if: env.SIGN == 'true'
+        env:
+          FREEREAC_PAGES_TOKEN: ${{ secrets.FREEREAC_PAGES_TOKEN }}
+        run: |
+          test -n "$FREEREAC_PAGES_TOKEN" || {
+            echo "::error::FREEREAC_PAGES_TOKEN is not set -- a fine-grained PAT with contents:write"
+            echo "::error::on FreeREAC/freereac.github.io, as a repository or organisation secret."
+            exit 1
+          }
+
+      - name: Checkout the public pages tree (FreeREAC/freereac.github.io)
+        if: env.SIGN == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: FreeREAC/freereac.github.io
+          ref: main
+          token: ${{ secrets.FREEREAC_PAGES_TOKEN }}
+          path: freereac-pages
+
+      - name: Publish into the public dnf tree, in place (never wiped)
+        # No --repo-id/--repo-name/--base-url override: the tree already carries freereac.repo
+        # and RPM-GPG-KEY-freereac, and the script's defaults are exactly those values.
+        if: env.SIGN == 'true'
+        run: |
+          set -o pipefail
+          publisher/packaging/publish-repo.sh --rpm-dir collected --out freereac-pages --key-id "$OMX_GPG_KEY_ID"
+
+      - name: Show what was published
+        if: env.SIGN == 'true'
+        run: |
+          set -o pipefail
+          echo "reac-stageboxes packages in the public tree:"
+          find freereac-pages/rpm -name 'reac-stageboxes-*.rpm' | sort
+          echo
+          echo "repodata timestamps:"
+          find freereac-pages/rpm -name repomd.xml | sort | xargs -r ls -l
+
+      - name: Commit and push the public tree
+        if: env.SIGN == 'true'
+        run: |
+          set -o pipefail
+          cd freereac-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- rpm/
+          if git diff --cached --quiet -- rpm/; then
+            echo "public tree already carries everything $RELEASE_TAG built -- nothing to commit"
+          else
+            git commit -m "reac-stageboxes $RELEASE_TAG: publish to the public dnf tree" -- rpm/
+            git push origin main
+          fi
+
+      - name: Assemble an UNSIGNED smoke tree (dry run only, never published)
+        # sign=false never checks out freereac-pages at all. This proves the build and collect
+        # halves and the publisher's placement, and writes nothing to the shared tree.
+        if: env.SIGN != 'true'
+        run: |
+          set -o pipefail
+          publisher/packaging/publish-repo.sh --rpm-dir collected --out tree --no-sign
+          find tree -name '*.rpm' | sort | tee /tmp/tree.txt
+          test -s /tmp/tree.txt || { echo "::error::publish-repo.sh emitted a tree with no packages"; exit 1; }
+          test -n "$(find tree -name repomd.xml -print -quit)" || { echo "::error::no repodata in the emitted tree"; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        if: env.SIGN != 'true'
+        with:
+          name: reac-stageboxes-dnf-tree
+          path: tree/**
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Report a dry run honestly
+        if: env.SIGN != 'true'
+        # WARNS and exits 0: the build and the unsigned assembly did real work (the artifact is
+        # the proof), and the run never CLAIMS to have published when it did not.
+        run: |
+          echo "::warning::sign=false (the default): this is a dry run, nothing was published."
+          echo "publish-repo.sh --no-sign emits repo_gpgcheck=0, and pushing that tree would make"
+          echo "a client trust unverified metadata -- so it stays local to this run."
+          echo "the assembled unsigned tree is attached to this run as 'reac-stageboxes-dnf-tree'."
