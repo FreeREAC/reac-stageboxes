@@ -1,0 +1,365 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Pau Aliagas <linuxnow@gmail.com>
+#
+# Build reac-stageboxes' RPM on GitHub Actions and publish it into the SAME
+# public dnf tree libreac and reac-pw publish into: FreeREAC/freereac.github.io,
+# dir `rpm/`. Shaped after libreac's release-rpm.yml and calling the same
+# packaging/publish-repo.sh unmodified -- a second copy of the placement/sign/
+# createrepo logic would be a build whose drift nobody sees. Its defaults (repo
+# id `freereac`, base URL `https://freereac.github.io/rpm`) ARE the tree's
+# identity, so nothing here overrides them.
+#
+# THE RPM IS BUILT AND SIGNED HERE, NEVER AT A DESK OR IN A POD. The package
+# suffix is fmx (reac-stageboxes-0.1.0-1.fc44.fmx.x86_64.rpm).
+#
+# Two ways in, and packaging/release-plan.sh is the one place that decides:
+#
+#   push of a dryrun-v<version> tag  A DRY RUN. Builds that tag, signs it with a
+#                                    throwaway key generated inside the job, and
+#                                    leaves a signed dnf tree in the job's workspace
+#                                    as an artifact. No secret is read; nothing is
+#                                    published. Push dryrun-v0.1.0 to try it.
+#   workflow_dispatch                Input `tag` (v[0-9]*) and `publish`. publish=false
+#                                    is the same dry run on a release tag. publish=true,
+#                                    from the default branch only, signs with the
+#                                    organisation's packages key and pushes the tree.
+#
+# A release tag push is deliberately not a trigger: publishing a package is a
+# human decision, not a side effect of a commit.
+#
+# SIGNING KEY, BY NAME: PACKAGES_GPG_KEY (the armoured secret key) and
+# PACKAGES_GPG_PASSPHRASE. The personal RPM_GPG_KEY is retired and never
+# referenced. Before signing, the imported key's fingerprint is checked against
+# the key the public tree already publishes (rpm/RPM-GPG-KEY-freereac): a
+# mismatch refuses the run rather than sign with a key repo_gpgcheck=1 clients
+# cannot verify. Rotating the tree's key to the packages key comes first.
+#
+# THE SHARED-TREE RACE: this workflow, libreac's and reac-pw's push to the SAME
+# branch of FreeREAC/freereac.github.io from different repositories, and
+# `concurrency:` groups are per repository. `git push` refuses a non-fast-forward,
+# and publish-repo.sh places by NEVRA and never removes, so a race loses to that
+# refusal and a retry is safe. Publish one release, wait for it to land, then the
+# next.
+#
+# reac-stageboxes only Requires reac-pw at run time: nothing here needs the
+# public tree to build.
+
+name: Release reac-stageboxes RPM to the dnf repo
+
+on:
+  push:
+    tags:
+      - 'dryrun-v[0-9]*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build (must already exist and match v[0-9]*, e.g. v0.1.0)'
+        required: true
+      publish:
+        description: 'Sign with the packages key and publish into the public dnf tree. false is a dry run that publishes nothing.'
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-rpm-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Decide what this run does
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      ref: ${{ steps.plan.outputs.ref }}
+      version: ${{ steps.plan.outputs.version }}
+      mode: ${{ steps.plan.outputs.mode }}
+    steps:
+      # The workflow's own ref carries the planner: for a publish that is the
+      # default branch, which the planner itself insists on.
+      - uses: actions/checkout@v4
+
+      - name: Plan the run
+        id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_PUBLISH: ${{ inputs.publish }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: packaging/release-plan.sh
+
+  build:
+    name: Build reac-stageboxes RPM (fc44, x86_64)
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: fedora:44
+    env:
+      RELEASE_REF: ${{ needs.plan.outputs.ref }}
+      RELEASE_VERSION: ${{ needs.plan.outputs.version }}
+      RPM_TOPDIR: ${{ github.workspace }}/rpmbuild
+    steps:
+      # actions/checkout needs git INSIDE the container or it falls back to a
+      # tarball with no .git, and build-rpm.sh archives from git.
+      - name: git for the checkout
+        run: dnf install -y -q git
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          ref: ${{ needs.plan.outputs.ref }}
+
+      - name: Install build dependencies (dnf builddep against the spec)
+        run: |
+          set -o pipefail
+          dnf install -y --setopt=install_weak_deps=False git rpm-build rpmdevtools
+          dnf builddep -y packaging/reac-stageboxes.spec
+
+      - name: Verify the checkout is the tag, exactly
+        run: |
+          set -o pipefail
+          # The checkout is owned by a different uid than the container's shell;
+          # without this git refuses the repository ("dubious ownership").
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          TAG_COMMIT=$(git rev-parse "refs/tags/$RELEASE_REF^{commit}") \
+            || { echo "::error::'$RELEASE_REF' is not a tag in this repository"; exit 1; }
+          test "$TAG_COMMIT" = "$(git rev-parse HEAD)" \
+            || { echo "::error::HEAD is not the commit tag '$RELEASE_REF' points at"; exit 1; }
+          echo "building $RELEASE_REF at $TAG_COMMIT"
+
+      - name: Build the reac-stageboxes RPM
+        # build-rpm.sh refuses a version that meson.build and the spec do not
+        # both carry, then archives HEAD and runs rpmbuild -ba (which runs the
+        # meson test suite in %check).
+        run: |
+          set -o pipefail
+          packaging/build-rpm.sh "$RELEASE_VERSION"
+
+      - name: Show what was built, and refuse an empty or unsuffixed build
+        run: |
+          set -o pipefail
+          find "$RPM_TOPDIR/RPMS" "$RPM_TOPDIR/SRPMS" -name '*.rpm' | sort | tee /tmp/built.txt
+          # A publish over an empty directory succeeds and publishes nothing: count
+          # before trusting the emptiness.
+          test -s /tmp/built.txt || { echo "::error::no RPM was produced"; exit 1; }
+          # Every package carries the project suffix after the Fedora dist tag.
+          BAD=$(grep -v -E -- "-$RELEASE_VERSION-[0-9]+\.fc[0-9]+\.fmx\.[a-z0-9_]+\.rpm$" /tmp/built.txt || true)
+          test -z "$BAD" || { echo "::error::not named <version>-<n>.fcNN.fmx.<arch>.rpm:"; echo "$BAD"; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reac-stageboxes-rpm-fc44-x86_64
+          path: |
+            rpmbuild/RPMS/**/*.rpm
+            rpmbuild/SRPMS/*.rpm
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Sign, and publish or dry-run the dnf tree
+    needs: [plan, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: fedora:44
+    permissions:
+      contents: write
+    env:
+      RELEASE_REF: ${{ needs.plan.outputs.ref }}
+      MODE: ${{ needs.plan.outputs.mode }}
+    steps:
+      # git: the public-pages checkout below has to commit and push, which the
+      # tarball fallback of actions/checkout cannot do. curl: reads the public
+      # tree's own key to check it before signing with the packages key. gh: the
+      # release attach.
+      - name: Install packaging tools
+        run: dnf install -y --setopt=install_weak_deps=False createrepo_c rpm-sign gnupg2 pinentry findutils git curl gh
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.plan.outputs.ref }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: reac-stageboxes-rpm-*
+          merge-multiple: true
+          path: collected/
+
+      - name: Prove the artifacts arrived before anything signs them
+        run: |
+          set -o pipefail
+          find collected -name '*.rpm' | sort | tee /tmp/collected.txt
+          test -s /tmp/collected.txt || { echo "::error::no RPM was downloaded from the build job"; exit 1; }
+
+      # ---- publish: the packages key, the public tree -----------------------
+
+      - name: Import the packages signing key
+        if: env.MODE == 'publish'
+        env:
+          GPG_KEY: ${{ secrets.PACKAGES_GPG_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.PACKAGES_GPG_PASSPHRASE }}
+        run: |
+          set -o pipefail
+          test -n "$GPG_KEY" || { echo "::error::PACKAGES_GPG_KEY is not set; a signed publish cannot proceed"; exit 1; }
+          printf '%s\n' "$GPG_KEY" | gpg --batch --import
+          KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/ {print $10; exit}')
+          test -n "$KEY_ID" || { echo "::error::no secret key imported from PACKAGES_GPG_KEY"; exit 1; }
+          echo "SIGNING_KEY_ID=$KEY_ID" >> "$GITHUB_ENV"
+          mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
+          echo 'allow-loopback-pinentry' >> ~/.gnupg/gpg-agent.conf
+          echo 'pinentry-mode loopback'  >> ~/.gnupg/gpg.conf
+          printf '%s' "$GPG_PASSPHRASE" > ~/.gnupg/passphrase
+          chmod 600 ~/.gnupg/passphrase
+          echo "passphrase-file $HOME/.gnupg/passphrase" >> ~/.gnupg/gpg.conf
+          gpgconf --kill gpg-agent || true
+
+      - name: Verify the signing key matches the public tree's published key
+        # KEY HONESTY: the secret cannot be read, so its identity is proved by
+        # fingerprint against the key the tree it signs INTO already publishes.
+        # A mismatch means clients with repo_gpgcheck=1 could not verify what
+        # this run signs -- refuse before a package is signed, not after a push
+        # nobody can undo.
+        if: env.MODE == 'publish'
+        run: |
+          set -o pipefail
+          PUB_FPR=$(curl -fsSL https://freereac.github.io/rpm/RPM-GPG-KEY-freereac \
+            | gpg --batch --with-colons --dry-run --import-options import-show --import 2>/dev/null \
+            | awk -F: '/^fpr:/ {print $10; exit}')
+          test -n "$PUB_FPR" || { echo "::error::could not read a fingerprint from https://freereac.github.io/rpm/RPM-GPG-KEY-freereac"; exit 1; }
+          if [ "$PUB_FPR" != "$SIGNING_KEY_ID" ]; then
+            echo "::error::PACKAGES_GPG_KEY (fingerprint $SIGNING_KEY_ID) does not match the public"
+            echo "::error::tree's published key (fingerprint $PUB_FPR) -- refusing to sign. Either the wrong"
+            echo "::error::secret is set, or the tree's key has not been rotated to the packages key yet."
+            exit 1
+          fi
+          echo "signing key matches the public tree's key: $SIGNING_KEY_ID"
+
+      - name: Require the public-pages token before touching the public tree
+        # Fails loud and BY NAME: a missing secret must never fall back to an
+        # unauthenticated checkout or skip the public publish without saying so.
+        if: env.MODE == 'publish'
+        env:
+          FREEREAC_PAGES_TOKEN: ${{ secrets.FREEREAC_PAGES_TOKEN }}
+        run: |
+          test -n "$FREEREAC_PAGES_TOKEN" || {
+            echo "::error::FREEREAC_PAGES_TOKEN is not set -- create a fine-grained PAT with"
+            echo "::error::contents:write on FreeREAC/freereac.github.io and add it as a repository secret."
+            exit 1
+          }
+
+      - name: Checkout the public pages tree (FreeREAC/freereac.github.io)
+        if: env.MODE == 'publish'
+        uses: actions/checkout@v4
+        with:
+          repository: FreeREAC/freereac.github.io
+          ref: main
+          token: ${{ secrets.FREEREAC_PAGES_TOKEN }}
+          path: freereac-pages
+
+      - name: Publish into the public dnf tree, in place (never wiped)
+        # No --repo-id/--repo-name/--base-url override: the checkout already
+        # carries freereac.repo and RPM-GPG-KEY-freereac, and the script's
+        # defaults are those values, so this run merges into them.
+        if: env.MODE == 'publish'
+        run: |
+          set -o pipefail
+          packaging/publish-repo.sh --rpm-dir collected --out freereac-pages --key-id "$SIGNING_KEY_ID"
+
+      - name: Show what was published
+        if: env.MODE == 'publish'
+        run: |
+          set -o pipefail
+          echo "reac-stageboxes packages in the public tree:"
+          find freereac-pages/rpm -name 'reac-stageboxes-*.rpm' | sort
+          echo
+          echo "repodata timestamps:"
+          find freereac-pages/rpm -name repomd.xml | sort | xargs -r ls -l
+
+      - name: Commit and push the public tree
+        if: env.MODE == 'publish'
+        run: |
+          set -o pipefail
+          cd freereac-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- rpm/
+          if git diff --cached --quiet -- rpm/; then
+            echo "public tree already carries everything $RELEASE_REF built -- nothing to commit"
+          else
+            git commit -m "reac-stageboxes $RELEASE_REF: publish to the public dnf tree" -- rpm/
+            git push origin main
+          fi
+
+      # THE PACKAGES ARE PUBLIC, OR THEY ARE NOT PUBLISHED. A run artifact expires
+      # and needs a GitHub login; a Release asset does not. The SIGNED packages the
+      # tree now carries are what is attached. --clobber makes a re-run idempotent.
+      - name: Attach the signed packages to the release
+        if: env.MODE == 'publish'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          gh release view "$RELEASE_REF" >/dev/null 2>&1 || \
+            gh release create "$RELEASE_REF" --title "$RELEASE_REF" --generate-notes
+          find freereac-pages/rpm -name "reac-stageboxes-${RELEASE_REF#v}-*.rpm" | sort | tee /tmp/assets.txt
+          test -s /tmp/assets.txt || { echo "::error::no signed RPM to attach"; exit 1; }
+          xargs -a /tmp/assets.txt gh release upload "$RELEASE_REF" --clobber
+
+      # ---- dry run: a throwaway key, a tree in the workspace ----------------
+
+      - name: Generate a throwaway signing key (dry run only)
+        # The dry run proves the SIGNING path -- rpmsign over every package, the
+        # repomd detach-signature, the key export -- without reading a secret. The
+        # key lives in this container and dies with it.
+        if: env.MODE != 'publish'
+        run: |
+          set -o pipefail
+          gpg --batch --pinentry-mode loopback --passphrase '' \
+            --quick-generate-key 'reac-stageboxes dry run <dry-run@invalid>' ed25519 sign never
+          KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/ {print $10; exit}')
+          test -n "$KEY_ID" || { echo "::error::no throwaway key was generated"; exit 1; }
+          echo "SIGNING_KEY_ID=$KEY_ID" >> "$GITHUB_ENV"
+
+      - name: Build and sign the dnf tree in the workspace (dry run only)
+        if: env.MODE != 'publish'
+        run: |
+          set -o pipefail
+          packaging/publish-repo.sh --rpm-dir collected --out tree --key-id "$SIGNING_KEY_ID"
+
+      - name: Prove the tree is signed, and by the throwaway key (dry run only)
+        if: env.MODE != 'publish'
+        run: |
+          set -o pipefail
+          rpm --import tree/rpm/RPM-GPG-KEY-freereac
+          find tree/rpm -name '*.rpm' | sort > /tmp/tree.txt
+          test -s /tmp/tree.txt || { echo "::error::the dry-run tree holds no RPM"; exit 1; }
+          while read -r f; do
+            rpmkeys --checksig "$f" | tee /tmp/checksig.txt
+            grep -q 'signatures OK' /tmp/checksig.txt || { echo "::error::$f does not verify against the tree's key"; exit 1; }
+          done < /tmp/tree.txt
+          find tree/rpm -name repomd.xml.asc | sort > /tmp/asc.txt
+          test -s /tmp/asc.txt || { echo "::error::no repomd.xml.asc in the dry-run tree"; exit 1; }
+          while read -r a; do gpg --verify "$a" "${a%.asc}"; done < /tmp/asc.txt
+
+      - uses: actions/upload-artifact@v4
+        if: env.MODE != 'publish'
+        with:
+          name: reac-stageboxes-dryrun-dnf-tree
+          path: tree/**
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Report a dry run honestly
+        if: env.MODE != 'publish'
+        # WARNS and exits 0: the build, the signing and the verification did real
+        # work (the artifact is the proof). This step exists so the run never
+        # CLAIMS to have published when it did not.
+        run: |
+          echo "::warning::dry run: nothing was published. The tree is signed with a throwaway key and is attached to this run as 'reac-stageboxes-dryrun-dnf-tree' for inspection only."

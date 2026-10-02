@@ -73,3 +73,23 @@ readme_no_build = find_program('readme-no-build.sh')
 test('readme-no-build-self-test', readme_no_build, args : ['--self-test'])
 test('readme-no-build', readme_no_build,
   args : [meson.project_source_root() / 'README.md'])
+
+# A RELEASE RUN DOES WHAT A HUMAN ASKED, AND NOTHING ELSE. A publish needs a
+# dispatch from the default branch; a tag push can only dry-run. Each row of the
+# table is a way the decision could go wrong, found by sabotaging the guard.
+test('release-plan', find_program('release-plan.sh'),
+  args : [meson.project_source_root() / 'packaging' / 'release-plan.sh'])
+
+# THE TAG IS THE VERSION, AND THE PACKAGE SAYS SO. build-rpm.sh refuses a tag
+# that is not the version meson.build and the spec carry, and the spec's Release
+# ends in the fmx suffix. rpmbuild is a stub: the proof is what it is handed.
+# Skips (77) outside a git work tree, which is where an rpm build runs it.
+test('build-rpm', find_program('build-rpm.sh'))
+
+# THE RELEASE WORKFLOW CANNOT PUBLISH BY ACCIDENT. Only a dryrun-v tag push and a
+# dispatch start it, it reads no secret but the packages key, its passphrase and
+# the pages token, and every step that reads one, pushes or attaches a release
+# asset is gated on env.MODE == 'publish'. --self-test proves each guard fires.
+test('release-workflow-self-test', find_program('release-workflow.sh'), args : ['--self-test'])
+test('release-workflow', find_program('release-workflow.sh'),
+  args : [meson.project_source_root() / '.github' / 'workflows' / 'release-rpm.yml'])

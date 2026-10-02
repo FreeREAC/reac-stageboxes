@@ -32,6 +32,26 @@ cp build/meson-dist/reac-stageboxes-0.1.0.tar.gz ~/rpmbuild/SOURCES/
 rpmbuild -bb packaging/reac-stageboxes.spec
 ```
 
+## Releasing
+
+RPMs are built, signed and published by GitHub Actions
+(`.github/workflows/release-rpm.yml`), never from a desk. The package carries
+the `fmx` suffix (`reac-stageboxes-0.1.0-1.fc44.fmx`).
+
+- Push a tag `dryrun-v<version>`: the RPM is built and signed with a throwaway
+  key into the job's workspace, and the signed dnf tree is checked and kept as an
+  artifact. Nothing is published.
+- Dispatch the workflow with `tag` = `v<version>` and `publish` ticked, from
+  `main`: the same build is signed with the org packages key and pushed to the
+  FreeREAC dnf repo, and the RPM is attached to the release. Any other branch is
+  refused. A tag push alone never publishes.
+
+The version in the tag, `meson.build` and the spec must agree; `build-rpm.sh`
+refuses otherwise. Secrets, by name: `PACKAGES_GPG_KEY` and
+`PACKAGES_GPG_PASSPHRASE` (the signing key) and `FREEREAC_PAGES_TOKEN` (push to
+the dnf tree). The key's fingerprint must match the one the dnf tree publishes,
+or the publish stops before signing.
+
 ## Translations
 
 A binary run from the build tree finds the catalogues meson built beside it, so
