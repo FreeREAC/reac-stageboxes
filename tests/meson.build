@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Pau Aliagas <linuxnow@gmail.com>
 #
-# Three offline tests. None of them needs a PipeWire session, a graph or a box.
+# Offline tests. None of them needs a PipeWire session, a graph or a box.
 
 # The param-name mapping and the dB/wire-value conversion. The expected key
 # strings and dB figures are written out longhand, because a key this
@@ -64,3 +64,12 @@ test('i18n-catalan', find_program('i18n-catalan.sh'),
 # through the whole i18n suite. This reads the SOURCES instead.
 test('i18n-no-bare-strings', find_program('i18n-no-bare-strings.py'),
   args : [meson.project_source_root() / 'src'])
+
+# THE README CARRIES NO BUILD COMMAND. It sells the package and says how to
+# install it; building is in BUILDING.md. Only code is read (fenced blocks and
+# inline spans), since "make" is also an English verb. The self-test runs first
+# so a scanner that flags nothing cannot pass for a clean README.
+readme_no_build = find_program('readme-no-build.sh')
+test('readme-no-build-self-test', readme_no_build, args : ['--self-test'])
+test('readme-no-build', readme_no_build,
+  args : [meson.project_source_root() / 'README.md'])
