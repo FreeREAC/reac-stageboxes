@@ -73,3 +73,9 @@ readme_no_build = find_program('readme-no-build.sh')
 test('readme-no-build-self-test', readme_no_build, args : ['--self-test'])
 test('readme-no-build', readme_no_build,
   args : [meson.project_source_root() / 'README.md'])
+
+# A RELEASE RUN DOES WHAT A HUMAN ASKED, AND NOTHING ELSE. A publish needs a
+# dispatch from the default branch; a tag push can only dry-run. Each row of the
+# table is a way the decision could go wrong, found by sabotaging the guard.
+test('release-plan', find_program('release-plan.sh'),
+  args : [meson.project_source_root() / 'packaging' / 'release-plan.sh'])
