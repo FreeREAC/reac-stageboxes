@@ -11,9 +11,10 @@
 #   tests/build-rpm.sh
 set -uo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
-# an rpm build unpacks a tarball: no repository, so no `git archive` to prove
-if ! git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-	echo "SKIP build-rpm: $root is not a git work tree"
+# an rpm build unpacks a tarball: no repository of its own, so no `git archive`
+# to prove (a build dir inside some other work tree does not count)
+if [ "$(git -C "$root" rev-parse --show-toplevel 2>/dev/null)" != "$root" ]; then
+	echo "SKIP build-rpm: $root is not the top of a git work tree"
 	exit 77
 fi
 fail=0
