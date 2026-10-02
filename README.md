@@ -39,23 +39,18 @@ Sensitivity is shown in **dBu**, the unit the protocol carries:
 way from gain — the hottest setting is the most negative number — and it is not
 the same number a mixing desk shows for the same preamp.
 
-Target: Fedora + PipeWire 1.4, GTK 4.10+, libadwaita 1.4+.
+Runs on Fedora with PipeWire 1.4, GTK 4.10+ and libadwaita 1.4+.
 
 ## Install
 
-**From source.**
+Install the RPM; it `Requires: reac-pw`, which is what publishes the nodes this
+reads:
 
 ```
-sudo dnf install meson ninja-build gcc gettext desktop-file-utils \
-                 pipewire-devel gtk4-devel libadwaita-devel
-meson setup build
-meson compile -C build
-meson test -C build
-sudo meson install -C build
+sudo dnf install ./reac-stageboxes-*.rpm
 ```
 
-**From an RPM.** `packaging/reac-stageboxes.spec` builds the package; it
-`Requires: reac-pw`, which is what publishes the nodes this reads.
+Building it, from source or as an RPM, is in [BUILDING.md](BUILDING.md).
 
 ## Usage
 
@@ -90,14 +85,8 @@ volume.
 English and Catalan (`po/`). The interface and `--list` both go through the same
 catalogue, so a Catalan session gets Catalan in the window and in the terminal.
 
-A binary run from the build tree finds the catalogues meson built beside it, so
-`LANGUAGE=ca b/reac-stageboxes --list` is Catalan without installing anything.
-`REAC_STAGEBOXES_LOCALEDIR` overrides the search when you want to point it at
-another tree; an installed binary falls back to its configured `localedir`.
-
-Adding a string means wrapping it in `_()` and translating it in every
-catalogue: `meson test` fails otherwise, both on a string that never reached the
-template and on a template entry no catalogue translates.
+Developer notes on catalogues (a build-tree run, adding a string) are in
+[BUILDING.md](BUILDING.md).
 
 ## Licence
 
