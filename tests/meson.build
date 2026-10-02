@@ -79,3 +79,9 @@ test('readme-no-build', readme_no_build,
 # table is a way the decision could go wrong, found by sabotaging the guard.
 test('release-plan', find_program('release-plan.sh'),
   args : [meson.project_source_root() / 'packaging' / 'release-plan.sh'])
+
+# THE TAG IS THE VERSION, AND THE PACKAGE SAYS SO. build-rpm.sh refuses a tag
+# that is not the version meson.build and the spec carry, and the spec's Release
+# ends in the fmx suffix. rpmbuild is a stub: the proof is what it is handed.
+# Skips (77) outside a git work tree, which is where an rpm build runs it.
+test('build-rpm', find_program('build-rpm.sh'))

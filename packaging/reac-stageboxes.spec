@@ -2,7 +2,10 @@
 # reac-stageboxes — the REAC stagebox preamp application.
 Name:           reac-stageboxes
 Version:        %{?version_override}%{!?version_override:0.1.0}
-Release:        1%{?dist}
+# The fmx suffix follows the dist tag (1.fc44.fmx), so the tree's publisher still
+# reads the Fedora release from .fcNN and every package from this project is
+# recognisable by name.
+Release:        1%{?dist}.fmx
 Summary:        Manage REAC stagebox preamps (phantom, pad, sensitivity)
 
 License:        GPL-3.0-or-later
