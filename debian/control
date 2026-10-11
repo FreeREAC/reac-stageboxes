@@ -1,0 +1,30 @@
+Source: reac-stageboxes
+Section: sound
+Priority: optional
+Maintainer: Pau Aliagas <linuxnow@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+ meson (>= 0.60),
+ pkgconf,
+ gettext,
+ desktop-file-utils,
+ appstream,
+ locales-all,
+ libgtk-4-dev (>= 4.10),
+ libadwaita-1-dev (>= 1.4),
+ libpipewire-0.3-dev (>= 0.3.65),
+ libspa-0.2-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/FreeREAC/reac-stageboxes
+Rules-Requires-Root: no
+
+Package: reac-stageboxes
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, reac-pw (>= 1.0.5), pipewire
+Description: Preamp control for Roland REAC stageboxes
+ A GTK4 and libadwaita application that sets phantom power, the pad and the
+ sensitivity on every input of every REAC stagebox on the wire.
+ .
+ It is a PipeWire client and nothing else. It binds the nodes reac-pw
+ publishes, shows each box's inputs, and writes the change back through the
+ daemon. A control the box cannot take is shown with the reason instead of a
+ dead switch.

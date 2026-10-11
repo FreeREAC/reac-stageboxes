@@ -105,6 +105,7 @@ fi
 %license LICENSE
 %doc README.md
 %{_bindir}/reac-stageboxes
+%{_mandir}/man1/reac-stageboxes.1*
 %{_datadir}/applications/org.freereac.Stageboxes.desktop
 %{_datadir}/metainfo/org.freereac.Stageboxes.metainfo.xml
 %{_datadir}/icons/hicolor/scalable/apps/org.freereac.Stageboxes.svg

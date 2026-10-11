@@ -73,3 +73,8 @@ readme_no_build = find_program('readme-no-build.sh')
 test('readme-no-build-self-test', readme_no_build, args : ['--self-test'])
 test('readme-no-build', readme_no_build,
   args : [meson.project_source_root() / 'README.md'])
+
+# THE VERSION IS ONE NUMBER in meson.build, the spec, debian/changelog and the
+# newest AppStream release; a tag is v<that number>.
+test('version-agree', find_program('version-agree.sh'),
+  args : [meson.project_source_root()])
