@@ -36,11 +36,15 @@ rpmbuild -bb packaging/reac-stageboxes.spec
 ## Releasing
 
 `.github/workflows/ci.yml` runs `meson test` on Fedora 44 and Debian trixie for every push to `main` and
-every pull request. `.github/workflows/release.yml` calls the shared build-rpm and build-deb workflows:
+every pull request. `.github/workflows/release.yml` calls the shared build-rpm and build-deb workflows of
+FreeMixer/.github on a pull request or a manual run, as a dry run that builds and lints the RPMs and DEBs
+and publishes nothing.
 
-- On a pull request or a manual run it builds and lints the RPMs and DEBs and publishes nothing.
-- A tag `v<version>` builds them on x86_64/amd64 and aarch64/arm64, signs them with the organisation's
-  packages key, publishes them into the FreeMixer channel and attaches the RPMs to the GitHub release.
+A release is made in two steps, because this organisation holds neither the packages key nor the channel's
+token: push a signed annotated tag `v<version>`, then run "Publish FreeREAC release" in FreeMixer/.github
+with `FreeREAC/reac-stageboxes`, the tag and publish ticked. That builds on x86_64/amd64 and aarch64/arm64,
+signs with the organisation's packages key and publishes into the FreeMixer channel. The GitHub release and
+its attached packages are made by hand from that run's artifacts.
 
 The version is one number: `meson.build`, the spec's `Version:`, the top of `debian/changelog` and the newest
 `<release>` in the AppStream file must agree, and `meson test` fails when they do not. The tag is `v` and that

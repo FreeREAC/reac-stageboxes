@@ -1,16 +1,17 @@
 name: release
 
-# Packages through the shared release workflows of FreeMixer/.github. A tag v<version> that is the Version of
-# packaging/reac-stageboxes.spec builds signed RPMs (Fedora 44, x86_64 and aarch64) and DEBs (Debian trixie,
-# amd64 and arm64), publishes them to the FreeMixer channel and attaches them to the GitHub release, whose
-# notes are the git log since the previous tag. Any other run, a pull request or a branch, is a dry run: it
-# builds and lints everything and publishes nothing.
+# Packages through the shared release workflows of FreeMixer/.github. A pull request or a manual run builds
+# and lints the RPMs (Fedora 44, x86_64 and aarch64) and the DEBs (Debian trixie, amd64 and arm64) and
+# publishes nothing.
+#
+# A tag does not publish from here: the FreeREAC organisation holds neither the packages signing key nor the
+# channel's token. After tagging v<version> (the Version of packaging/reac-stageboxes.spec), run the workflow
+# "Publish FreeREAC release" of FreeMixer/.github with this repository, the tag and publish on. It builds
+# from the tag, signs and publishes into the FreeMixer channel.
 #
 # The packages need reac-pw at run time only, so nothing here waits on another release.
 
 on:
-  push:
-    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -22,7 +23,7 @@ jobs:
     uses: FreeMixer/.github/.github/workflows/build-rpm.yml@main
     with:
       package-name: reac-stageboxes
-      publish: ${{ github.ref_type == 'tag' }}
+      publish: false
       needs-mod-host: false
       channel-deps: false
     secrets: inherit
@@ -31,7 +32,7 @@ jobs:
     uses: FreeMixer/.github/.github/workflows/build-deb.yml@main
     with:
       package-name: reac-stageboxes
-      publish: ${{ github.ref_type == 'tag' }}
+      publish: false
       dependencies: ''
       requires: ''
       channel-deps: false
