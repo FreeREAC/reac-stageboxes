@@ -27,11 +27,16 @@ if ! locale -a 2>/dev/null | grep -qiE '^ca_ES\.?(utf-?8)?$'; then
 	exit 77                       # meson: skipped, and reported as skipped
 fi
 
+# PipeWire's own client log lines ("[E][12:09:41.447258] pw.conf ...") carry a
+# timestamp and are English; where no PipeWire configuration exists they are the
+# bulk of the output. Only this program's lines are compared.
+own() { grep -v '^\[[A-Z]\]\[' ; }
+
 # THE OPERATOR'S CASE FIRST, and it is the one that was broken: run the binary
 # straight out of the build tree with NO override, so the only thing that can
 # find the catalogues is the binary's own build-relative fallback. Testing only
 # the env-var path would pass on exactly the build that failed on his desk.
-out=$(LANGUAGE=ca LC_ALL=ca_ES.UTF-8 "$BIN" --list 2>&1)
+out=$(LANGUAGE=ca LC_ALL=ca_ES.UTF-8 "$BIN" --list 2>&1 | own)
 echo "$out" | head -3
 
 # One of these Catalan sentences must be there (which one depends on whether
@@ -52,7 +57,7 @@ fi
 
 # AND THE DOCUMENTED OVERRIDE, pointed at the same catalogues.
 env_out=$(LANGUAGE=ca LC_ALL=ca_ES.UTF-8 REAC_STAGEBOXES_LOCALEDIR="$LOCALE_DIR" \
-          "$BIN" --list 2>&1)
+          "$BIN" --list 2>&1 | own)
 if [ "$env_out" != "$out" ]; then
 	echo "FAIL: REAC_STAGEBOXES_LOCALEDIR=$LOCALE_DIR gave different output from" >&2
 	echo "      the build-relative fallback, though both name the same catalogues." >&2
@@ -63,7 +68,7 @@ fi
 # the match above would prove nothing — it would mean the strings are identical
 # in both languages, or that neither catalogue is loading.
 en=$(LANGUAGE=en LC_ALL=ca_ES.UTF-8 REAC_STAGEBOXES_LOCALEDIR="$LOCALE_DIR" \
-     "$BIN" --list 2>&1)
+     "$BIN" --list 2>&1 | own)
 if [ "$out" = "$en" ]; then
 	echo "FAIL: the Catalan and English runs printed identical text, so the match" >&2
 	echo "      above proves nothing about the binding." >&2
