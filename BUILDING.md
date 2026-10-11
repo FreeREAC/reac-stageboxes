@@ -1,12 +1,12 @@
 # Building reac-stageboxes
 
-Target: Fedora + PipeWire 1.4, GTK 4.10+, libadwaita 1.4+. The only runtime
+Target: Fedora 44 and Debian trixie, PipeWire 1.4, GTK 4.10+, libadwaita 1.4+. The only runtime
 dependency beyond the toolkit is `reac-pw`, which publishes the nodes this reads.
 
 ## From source
 
 ```
-sudo dnf install meson ninja-build gcc gettext desktop-file-utils \
+sudo dnf install meson ninja-build gcc gettext desktop-file-utils appstream \
                  pipewire-devel gtk4-devel libadwaita-devel
 meson setup build
 meson compile -C build
@@ -21,10 +21,11 @@ driven offline. The i18n test that runs the binary under `LANGUAGE=ca` needs the
 itself skipped rather than passing. The suite also checks that the README carries
 no build command: build steps belong here.
 
-## The RPM
+## The packages
 
-`packaging/reac-stageboxes.spec` builds the package from a release tarball; it
-`Requires: reac-pw`.
+`packaging/reac-stageboxes.spec` and `debian/` build the RPM and the DEB. Both are built by the shared
+release workflows of [FreeMixer/.github](https://github.com/FreeMixer/.github), never from a desk; to try
+the RPM build by hand:
 
 ```
 meson dist -C build --formats gztar
@@ -34,23 +35,16 @@ rpmbuild -bb packaging/reac-stageboxes.spec
 
 ## Releasing
 
-RPMs are built, signed and published by GitHub Actions
-(`.github/workflows/release-rpm.yml`), never from a desk. The package carries
-the `fmx` suffix (`reac-stageboxes-0.1.0-1.fc44.fmx`).
+`.github/workflows/ci.yml` runs `meson test` on Fedora 44 and Debian trixie for every push to `main` and
+every pull request. `.github/workflows/release.yml` calls the shared build-rpm and build-deb workflows:
 
-- Push a tag `dryrun-v<version>`: the RPM is built and signed with a throwaway
-  key into the job's workspace, and the signed dnf tree is checked and kept as an
-  artifact. Nothing is published.
-- Dispatch the workflow with `tag` = `v<version>` and `publish` ticked, from
-  `main`: the same build is signed with the org packages key and pushed to the
-  FreeREAC dnf repo, and the RPM is attached to the release. Any other branch is
-  refused. A tag push alone never publishes.
+- On a pull request or a manual run it builds and lints the RPMs and DEBs and publishes nothing.
+- A tag `v<version>` builds them on x86_64/amd64 and aarch64/arm64, signs them with the organisation's
+  packages key, publishes them into the FreeMixer channel and attaches the RPMs to the GitHub release.
 
-The version in the tag, `meson.build` and the spec must agree; `build-rpm.sh`
-refuses otherwise. Secrets, by name: `PACKAGES_GPG_KEY` and
-`PACKAGES_GPG_PASSPHRASE` (the signing key) and `FREEREAC_PAGES_TOKEN` (push to
-the dnf tree). The key's fingerprint must match the one the dnf tree publishes,
-or the publish stops before signing.
+The version is one number: `meson.build`, the spec's `Version:`, the top of `debian/changelog` and the newest
+`<release>` in the AppStream file must agree, and `meson test` fails when they do not. The tag is `v` and that
+number. Release notes and package changelogs are generated from the git log.
 
 ## Translations
 

@@ -1,0 +1,33 @@
+.\" SPDX-License-Identifier: GPL-3.0-or-later
+.\" Copyright (C) 2026 Pau Aliagas <linuxnow@gmail.com>
+.TH REAC-STAGEBOXES 1 "" "reac-stageboxes" "User Commands"
+.SH NAME
+reac-stageboxes \- set phantom power, pad and sensitivity on REAC stagebox inputs
+.SH SYNOPSIS
+.B reac-stageboxes
+.RB [ \-\-list ]
+.SH DESCRIPTION
+A GTK4/libadwaita application that shows every REAC segment in the PipeWire
+graph and sets phantom power, the pad and the sensitivity of each input of the
+selected stagebox.
+It is a PipeWire client: it reads and writes the nodes that
+.BR reac-pw (1)
+publishes, and needs nothing else.
+A control the box or the daemon cannot honour is shown with the reason instead
+of a dead switch.
+.SH OPTIONS
+.TP
+.B \-\-list
+Print the segments found, each box's badge and capability, and the asserted
+values of each input, then exit.
+No window is opened and nothing is written.
+The exit status is 0 when at least one segment was found and 1 when none was.
+.SH ENVIRONMENT
+.TP
+.B REAC_STAGEBOXES_LOCALEDIR
+Directory to read message catalogues from, instead of the build tree or the
+installed location.
+.SH SEE ALSO
+.BR reac-pw (1)
+.SH AUTHOR
+Pau Aliagas <linuxnow@gmail.com>

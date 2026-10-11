@@ -39,18 +39,33 @@ Sensitivity is shown in **dBu**, the unit the protocol carries:
 way from gain — the hottest setting is the most negative number — and it is not
 the same number a mixing desk shows for the same preamp.
 
-Runs on Fedora with PipeWire 1.4, GTK 4.10+ and libadwaita 1.4+.
+Runs on Fedora 44 and Debian trixie (and Raspberry Pi OS based on it) with PipeWire 1.4, GTK 4.10+ and
+libadwaita 1.4+.
 
 ## Install
 
-Install the RPM; it `Requires: reac-pw`, which is what publishes the nodes this
-reads:
+reac-stageboxes is published, signed, in the FreeMixer package channel, for Fedora 44 (x86_64, aarch64)
+and Debian trixie (amd64, arm64). It needs `reac-pw`, which publishes the nodes it reads, and the package
+pulls it in from the same channel.
+
+Fedora:
 
 ```
-sudo dnf install ./reac-stageboxes-*.rpm
+sudo dnf config-manager addrepo --from-repofile=https://freemixer.github.io/rpm/freemixer.repo
+sudo dnf install reac-stageboxes
 ```
 
-Building it, from source or as an RPM, is in [BUILDING.md](BUILDING.md).
+Debian and Raspberry Pi OS:
+
+```
+sudo install -d /etc/apt/keyrings
+sudo curl -fsSL -o /etc/apt/keyrings/freemixer.asc https://freemixer.github.io/deb/freemixer.asc
+echo "deb [signed-by=/etc/apt/keyrings/freemixer.asc] https://freemixer.github.io/deb/debian/$(. /etc/os-release && echo $VERSION_CODENAME) ./" | sudo tee /etc/apt/sources.list.d/freemixer.list
+sudo apt update
+sudo apt install reac-stageboxes
+```
+
+Building it from source is in [BUILDING.md](BUILDING.md).
 
 ## Usage
 

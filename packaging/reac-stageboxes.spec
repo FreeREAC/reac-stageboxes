@@ -1,11 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # reac-stageboxes — the REAC stagebox preamp application.
 Name:           reac-stageboxes
-Version:        %{?version_override}%{!?version_override:0.1.0}
-# The fmx suffix follows the dist tag (1.fc44.fmx), so the tree's publisher still
-# reads the Fedora release from .fcNN and every package from this project is
-# recognisable by name.
-Release:        1%{?dist}.fmx
+# meson.build's project version is the same number; a release tag is v<Version>.
+Version:        0.1.0
+Release:        1%{?dist}
 Summary:        Manage REAC stagebox preamps (phantom, pad, sensitivity)
 
 License:        GPL-3.0-or-later
@@ -107,11 +105,10 @@ fi
 %license LICENSE
 %doc README.md
 %{_bindir}/reac-stageboxes
+%{_mandir}/man1/reac-stageboxes.1*
 %{_datadir}/applications/org.freereac.Stageboxes.desktop
 %{_datadir}/metainfo/org.freereac.Stageboxes.metainfo.xml
 %{_datadir}/icons/hicolor/scalable/apps/org.freereac.Stageboxes.svg
 %{_datadir}/icons/hicolor/symbolic/apps/org.freereac.Stageboxes-symbolic.svg
 
 %changelog
-* Mon Sep 14 2026 Pau Aliagas <linuxnow@gmail.com> - 0.1.0-1
-- First package.

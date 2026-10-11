@@ -38,3 +38,5 @@ if appstream_util.found()
   test('metainfo-validate', appstream_util,
     args : ['validate', '--no-net', metainfo_file])
 endif
+
+install_man('reac-stageboxes.1')

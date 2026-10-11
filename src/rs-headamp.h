@@ -55,7 +55,7 @@ enum rs_headamp_param {
  * (measured over all 56 steps on an S-0808: span 54.60 dB, slope 0.988
  * dB/step, pad 20.12/20.20 dB). SENSITIVITY RUNS THE OTHER WAY FROM GAIN — the
  * hottest setting is the most negative number — and it is not silently
- * convertible into the gain figure openmixer shows, which uses a zero 10 dB
+ * convertible into the gain figure a mixing desk shows, which uses a zero 10 dB
  * away. This application shows dBu and says dBu.
  *
  * The ceiling is a DEFAULT, not a law: the daemon publishes its own in
