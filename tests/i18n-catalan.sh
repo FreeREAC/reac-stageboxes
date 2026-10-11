@@ -34,12 +34,14 @@ fi
 out=$(LANGUAGE=ca LC_ALL=ca_ES.UTF-8 "$BIN" --list 2>&1)
 echo "$out" | head -3
 
-# One of these two Catalan sentences must be there. Matching a WHOLE phrase, not
+# One of these Catalan sentences must be there (which one depends on whether
+# a PipeWire daemon, or even its client configuration, exists on the machine). Matching a WHOLE phrase, not
 # a stray accented letter: a single "é" could come from anywhere.
 if echo "$out" | grep -qF "segments REAC ("   \
    || echo "$out" | grep -qF "segment REAC (" \
    || echo "$out" | grep -qF "No s'ha trobat cap segment REAC" \
-   || echo "$out" | grep -qF "No s'ha pogut connectar amb PipeWire"; then
+   || echo "$out" | grep -qF "No s'ha pogut connectar amb PipeWire" \
+   || echo "$out" | grep -qF "No s'ha pogut crear el context de PipeWire"; then
 	:
 else
 	echo "FAIL: --list printed no Catalan with no override, so the build-relative" >&2
