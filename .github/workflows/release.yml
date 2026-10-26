@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   rpm:
-    uses: FreeMixer/.github/.github/workflows/build-rpm.yml@main
+    uses: FreeMixer/.github/.github/workflows/build-rpm.yml@v1
     with:
       package-name: reac-stageboxes
       publish: ${{ github.ref_type == 'tag' }}
@@ -28,7 +28,7 @@ jobs:
     secrets: inherit
 
   deb:
-    uses: FreeMixer/.github/.github/workflows/build-deb.yml@main
+    uses: FreeMixer/.github/.github/workflows/build-deb.yml@v1
     with:
       package-name: reac-stageboxes
       publish: ${{ github.ref_type == 'tag' }}
