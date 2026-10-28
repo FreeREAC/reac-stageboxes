@@ -10,6 +10,12 @@
 # the firmware, the REAC version, the link state — is a property reac-pw already
 # publishes on the node that carries reac.segment. Linking libreac here would
 # be a second copy of a decision the daemon already made.
+#
+# The one thing it takes from libreac is its HEADER: <reac/reac_ctrlblk.h> is the
+# one home of the head-amp parameter ids, the wire-channel space and the
+# sensitivity curve, and rs-headamp.h reads them there instead of copying them
+# (reac-stageboxes#4). A compile-time dependency only — no symbol of libreac is
+# linked, and the binary still needs nothing but reac-pw at run time.
 
 project('reac-stageboxes', 'c',
   version : '0.1.0',
@@ -41,6 +47,9 @@ adw_dep      = dependency('libadwaita-1', version : '>= 1.4')  # AdwSwitchRow, A
                                                                # AdwNavigationSplitView
 gio_dep      = dependency('gio-2.0')
 gobject_dep  = dependency('gobject-2.0')
+# libreac's headers only (see the note above): the wire vocabulary, not the code.
+libreac_hdr  = dependency('libreac', version : '>= 1.7.0').partial_dependency(
+  compile_args : true, includes : true)
 glib_dep     = dependency('glib-2.0')
 pipewire_dep = dependency('libpipewire-0.3', version : '>= 0.3.65')
 spa_dep      = dependency('libspa-0.2')
@@ -68,7 +77,7 @@ reac_stageboxes_exe = executable('reac-stageboxes',
   c_args : config_args,
   include_directories : include_directories('src'),
   dependencies : [gtk_dep, adw_dep, gio_dep, gobject_dep, glib_dep,
-                  pipewire_dep, spa_dep],
+                  pipewire_dep, spa_dep, libreac_hdr],
   install : true)
 
 subdir('data')
