@@ -9,7 +9,8 @@
 # what it does not recognise and set_param still returns success.
 test_headamp_map = executable('test_headamp_map',
   ['test_headamp_map.c'] + headamp_sources,
-  include_directories : include_directories('../src'))
+  include_directories : include_directories('../src'),
+  dependencies : [libreac_hdr])
 test('headamp-map', test_headamp_map)
 
 # The SPA pod a write actually carries, taken apart with the same iteration
@@ -17,7 +18,7 @@ test('headamp-map', test_headamp_map)
 test_props_pod = executable('test_props_pod',
   ['test_props_pod.c'] + props_sources + headamp_sources,
   include_directories : include_directories('../src'),
-  dependencies : [spa_dep])
+  dependencies : [spa_dep, libreac_hdr])
 test('props-pod', test_props_pod)
 
 # The model, driven by a synthetic node property dict — the literal type a
@@ -27,7 +28,7 @@ test('props-pod', test_props_pod)
 test_box_model = executable('test_box_model',
   ['test_box_model.c'] + box_sources + headamp_sources,
   include_directories : include_directories('../src'),
-  dependencies : [glib_dep, gobject_dep, spa_dep])
+  dependencies : [glib_dep, gobject_dep, spa_dep, libreac_hdr])
 test('box-model', test_box_model)
 
 # The registry walk, driven by a FAKE REGISTRY whose `global` events carry only
@@ -38,7 +39,7 @@ test('box-model', test_box_model)
 test_registry_walk = executable('test_registry_walk',
   ['test_registry_walk.c'] + walk_sources + box_sources + headamp_sources,
   include_directories : include_directories('../src'),
-  dependencies : [glib_dep, gobject_dep, spa_dep])
+  dependencies : [glib_dep, gobject_dep, spa_dep, libreac_hdr])
 test('registry-walk', test_registry_walk)
 
 # EVERY USER-VISIBLE STRING IS IN THE CATALOGUE. Re-extracts the template from
@@ -78,3 +79,12 @@ test('readme-no-build', readme_no_build,
 # newest AppStream release; a tag is v<that number>.
 test('version-agree', find_program('version-agree.sh'),
   args : [meson.project_source_root()])
+
+# THE HEAD-AMP VOCABULARY HAS ONE HOME. rs-headamp.h reads the parameter ids, the
+# channel space and the sensitivity curve from libreac's <reac/reac_ctrlblk.h>
+# and spells none of them as a number of its own (reac-stageboxes#4): a curve
+# corrected in libreac reaches this application at its next build, and a copy
+# that drifted would show the operator a dBu figure the box does not have. The
+# script also refuses a planted copy, so a clean result is not a broken search.
+test('headamp-one-home', find_program('headamp-one-home.sh'),
+  args : [meson.project_source_root() / 'src' / 'rs-headamp.h'])

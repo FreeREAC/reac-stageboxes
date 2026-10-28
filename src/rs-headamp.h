@@ -7,8 +7,9 @@
  * short list, because the application is a PipeWire client and not a REAC one:
  * the control-key grammar reac-pw parses, the wire-channel address, the
  * sensitivity curve, the readback cell list, and the rule that decides whether
- * a segment's preamps are reachable at all. No PipeWire, no GTK, no libreac —
- * so `meson test` drives every line of it offline.
+ * a segment's preamps are reachable at all. No PipeWire, no GTK, no libreac CODE
+ * (its header lends the wire vocabulary) — so `meson test` drives every line of
+ * it offline.
  *
  * THE NAMES ARE NOT GUESSED. Each one below is the spelling reac-pw publishes
  * or parses, quoted from its source, and the citation is on the definition. A
@@ -27,15 +28,22 @@
 
 #include <stddef.h>
 
-/* The parameter ids, as the wire numbers them — reac-pw's
- * `enum reac_headamp_param` (libreac <reac/reac_ctrlblk.h>), which is also the
- * number that appears in a `reac.headamp.asserted` cell (`ch:param=value`). */
+/* The wire vocabulary is libreac's and is READ from its header, never copied:
+ * <reac/reac_ctrlblk.h> (libreac-devel >= 1.7.0) is the one home of the
+ * parameter ids, the channel space and the sensitivity curve (reac-stageboxes#4,
+ * one-home law). This is a compile-time dependency only — the application
+ * links libpipewire and nothing else from the REAC stack; see meson.build. */
+#include <reac/reac_ctrlblk.h>
+
+/* The parameter ids, as the wire numbers them — libreac's `enum
+ * reac_headamp_param`, which is also the number that appears in a
+ * `reac.headamp.asserted` cell (`ch:param=value`). */
 enum rs_headamp_param {
-	RS_HEADAMP_PHANTOM = 0x00,   /* +48 V, 0 | 1 */
-	RS_HEADAMP_PAD     = 0x01,   /* the box's own -20 dB pad, 0 | 1 */
-	RS_HEADAMP_SENS    = 0x02,   /* sensitivity step, 0 .. sens-max */
+	RS_HEADAMP_PHANTOM = REAC_HEADAMP_PHANTOM,   /* +48 V, 0 | 1 */
+	RS_HEADAMP_PAD     = REAC_HEADAMP_PAD,       /* the box's own pad, 0 | 1 */
+	RS_HEADAMP_SENS    = REAC_HEADAMP_SENS,      /* sensitivity step, 0 .. sens-max */
 };
-#define RS_HEADAMP_NPARAMS 3
+#define RS_HEADAMP_NPARAMS (REAC_HEADAMP_SENS + 1)
 
 /* The SPA_PROP_params key prefix reac-pw's `reac_headamp_prop_parse` matches
  * (src/reac_headamp_prop.h, REAC_HEADAMP_PROP_PREFIX). A full control key is
@@ -45,13 +53,14 @@ enum rs_headamp_param {
 /* The head-amp WIRE-CHANNEL space, 0x00..0x2f (libreac REAC_HEADAMP_MAX_CH).
  * NOT the 40-slot audio space: an S-1608 strapped at base 0x20 occupies 32..47,
  * and a table bounded by 40 silently drops its inputs 9..16. */
-#define RS_HEADAMP_MAX_CH 48
+#define RS_HEADAMP_MAX_CH REAC_HEADAMP_MAX_CH
 
-/* The sensitivity curve, in whole dBu, from libreac <reac/reac_ctrlblk.h>:
+/* The sensitivity curve, in whole dBu, READ from libreac <reac/reac_ctrlblk.h>,
+ * which states it in centi-dB (REAC_HEADAMP_SENS_REF_CDB, _STEP_CDB, _PAD_CDB):
  *
- *     sensitivity_dBu = -10 - value + (pad ? 20 : 0)
+ *     sensitivity_dBu = ref - value * step + (pad ? pad_dB : 0)
  *
- * -10 dBu at step 0 down to -65 dBu at step 0x37, a flat 1 dB per step
+ * which is -10 dBu at step 0 down to -65 dBu at the last step, a flat 1 dB per step
  * (measured over all 56 steps on an S-0808: span 54.60 dB, slope 0.988
  * dB/step, pad 20.12/20.20 dB). SENSITIVITY RUNS THE OTHER WAY FROM GAIN — the
  * hottest setting is the most negative number — and it is not silently
@@ -61,10 +70,10 @@ enum rs_headamp_param {
  * The ceiling is a DEFAULT, not a law: the daemon publishes its own in
  * RS_PROP_HEADAMP_SENS_MAX when it has one, and a box whose travel differs
  * needs no new client. Use this only when that property is absent. */
-#define RS_HEADAMP_SENS_MAX_DEFAULT 0x37   /* 55 — the 56th and last step */
-#define RS_HEADAMP_SENS_REF_DBU     (-10)  /* step 0, pad off */
-#define RS_HEADAMP_SENS_STEP_DB     1
-#define RS_HEADAMP_PAD_DB           20
+#define RS_HEADAMP_SENS_MAX_DEFAULT REAC_HEADAMP_SENS_MAX            /* the last step */
+#define RS_HEADAMP_SENS_REF_DBU     (REAC_HEADAMP_SENS_REF_CDB / 100)  /* step 0, pad off */
+#define RS_HEADAMP_SENS_STEP_DB     (REAC_HEADAMP_SENS_STEP_CDB / 100)
+#define RS_HEADAMP_PAD_DB           (REAC_HEADAMP_PAD_CDB / 100)
 
 /* The node properties this application reads. Every one is published by
  * reac-pw on the node that carries `reac.segment` for that segment; the

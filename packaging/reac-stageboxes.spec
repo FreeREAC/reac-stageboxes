@@ -32,6 +32,8 @@ BuildRequires:  gtk4-devel
 BuildRequires:  libadwaita-devel
 BuildRequires:  pkgconfig(libpipewire-0.3)
 BuildRequires:  pkgconfig(libspa-0.2)
+# libreac's header only: the head-amp vocabulary rs-headamp.h reads (#4); nothing of it is linked
+BuildRequires:  pkgconfig(libreac) >= 1.7.0
 BuildRequires:  pkgconfig(gtk4)
 BuildRequires:  pkgconfig(libadwaita-1)
 # Validates the AppStream metainfo at build time, the same way
