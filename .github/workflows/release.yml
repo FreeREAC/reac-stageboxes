@@ -14,8 +14,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+# The shared workflows at v1 open an issue when a publish fails and read the run's own logs,
+# so the caller grants what their nested jobs declare: a caller that grants less cannot start.
 permissions:
   contents: write
+  issues: write
+  actions: read
 
 jobs:
   rpm:
@@ -25,7 +29,13 @@ jobs:
       publish: ${{ github.ref_type == 'tag' }}
       needs-mod-host: false
       channel-deps: false
-    secrets: inherit
+    secrets:
+      OPENMIXER_PACKAGES_SIGNING_KEY: ${{ secrets.OPENMIXER_PACKAGES_SIGNING_KEY }}
+      PAGES_TOKEN: ${{ secrets.PAGES_TOKEN }}
+      # The shared workflows still read SITE_GPG_KEY for the publish commits; this organisation holds the
+      # commit key under its adopted name (platform docs/operations/SIGNING_KEYS_TRANSITION.md, step 2).
+      SITE_GPG_KEY: ${{ secrets.OPENMIXER_CI_SIGNING_KEY }}
+      DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
 
   deb:
     uses: FreeMixer/.github/.github/workflows/build-deb.yml@v1
@@ -36,4 +46,12 @@ jobs:
       requires: ''
       channel-deps: false
       suite-matrix: '["trixie"]'
-    secrets: inherit
+    secrets:
+      OPENMIXER_PACKAGES_SIGNING_KEY: ${{ secrets.OPENMIXER_PACKAGES_SIGNING_KEY }}
+      RPM_GPG_KEY: ${{ secrets.RPM_GPG_KEY }}
+      RPM_GPG_PASSPHRASE: ${{ secrets.RPM_GPG_PASSPHRASE }}
+      PAGES_TOKEN: ${{ secrets.PAGES_TOKEN }}
+      # The shared workflows still read SITE_GPG_KEY for the publish commits; this organisation holds the
+      # commit key under its adopted name (platform docs/operations/SIGNING_KEYS_TRANSITION.md, step 2).
+      SITE_GPG_KEY: ${{ secrets.OPENMIXER_CI_SIGNING_KEY }}
+      DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
