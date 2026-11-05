@@ -2,7 +2,7 @@
 # reac-stageboxes — the REAC stagebox preamp application.
 Name:           reac-stageboxes
 # meson.build's project version is the same number; a release tag is v<Version>.
-Version:        0.1.0
+Version:        0.1.1
 Release:        1%{?dist}
 Summary:        Manage REAC stagebox preamps (phantom, pad, sensitivity)
 

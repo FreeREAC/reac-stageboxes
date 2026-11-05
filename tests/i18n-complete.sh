@@ -21,7 +21,7 @@ trap 'rm -rf "$tmp"' EXIT
 pot=$tmp/re-extracted.pot
 xgettext --from-code=UTF-8 --add-comments --keyword=_ --keyword=N_ \
          --keyword=ngettext:1,2 \
-         --package-name=reac-stageboxes --package-version=0.1.0 \
+         --package-name=reac-stageboxes --package-version=0.1.1 \
          --msgid-bugs-address=linuxnow@gmail.com --copyright-holder="Pau Aliagas" \
          -o "$pot" --directory=. $(grep -v desktop po/POTFILES) || exit 1
 xgettext --from-code=UTF-8 -L Desktop -j -o "$pot" \

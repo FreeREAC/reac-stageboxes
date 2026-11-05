@@ -29,7 +29,7 @@ the RPM build by hand:
 
 ```
 meson dist -C build --formats gztar
-cp build/meson-dist/reac-stageboxes-0.1.0.tar.gz ~/rpmbuild/SOURCES/
+cp build/meson-dist/reac-stageboxes-0.1.1.tar.gz ~/rpmbuild/SOURCES/
 rpmbuild -bb packaging/reac-stageboxes.spec
 ```
 
