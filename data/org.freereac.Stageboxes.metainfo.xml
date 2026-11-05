@@ -57,6 +57,11 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.1.1" date="2026-11-05">
+      <description>
+        <p>The head-amp vocabulary is read from libreac. Packages are built by the shared release workflows.</p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-09-14">
       <description>
         <p>First package.</p>
