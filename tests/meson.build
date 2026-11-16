@@ -80,6 +80,11 @@ test('readme-no-build', readme_no_build,
 test('version-agree', find_program('version-agree.sh'),
   args : [meson.project_source_root()])
 
+# THE TWO DEPENDENCIES ARE BOUNDED: libreac and reac-pw, a floor and the next major as the ceiling, in the spec and
+# debian/control alike (a consumer of a library minor is released in the same pass, never left on the old one).
+test('deps-bounded', find_program('deps-bounded.sh'),
+  args : [meson.project_source_root()])
+
 # THE HEAD-AMP VOCABULARY HAS ONE HOME. rs-headamp.h reads the parameter ids, the
 # channel space and the sensitivity curve from libreac's <reac/reac_ctrlblk.h>
 # and spells none of them as a number of its own (reac-stageboxes#4): a curve
