@@ -46,7 +46,8 @@ jobs:
       requires: ''
       channel-deps: true
       suite-matrix: '["trixie"]'
-    secrets: inherit
+    secrets:
+      OPENMIXER_PACKAGES_SIGNING_KEY: ${{ secrets.OPENMIXER_PACKAGES_SIGNING_KEY }}
       RPM_GPG_KEY: ${{ secrets.RPM_GPG_KEY }}
       RPM_GPG_PASSPHRASE: ${{ secrets.RPM_GPG_PASSPHRASE }}
       PAGES_TOKEN: ${{ secrets.PAGES_TOKEN }}
