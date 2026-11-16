@@ -33,7 +33,8 @@ BuildRequires:  libadwaita-devel
 BuildRequires:  pkgconfig(libpipewire-0.3)
 BuildRequires:  pkgconfig(libspa-0.2)
 # libreac's header only: the head-amp vocabulary rs-headamp.h reads (#4); nothing of it is linked
-BuildRequires:  pkgconfig(libreac) >= 1.7.0
+BuildRequires:  pkgconfig(libreac) >= 1.12.0
+BuildRequires:  pkgconfig(libreac) < 2
 BuildRequires:  pkgconfig(gtk4)
 BuildRequires:  pkgconfig(libadwaita-1)
 # Validates the AppStream metainfo at build time, the same way
@@ -41,10 +42,11 @@ BuildRequires:  pkgconfig(libadwaita-1)
 BuildRequires:  appstream
 
 # reac-pw is what makes this application do anything: it publishes the nodes
-# this reads and writes, and >= 1.0.5 is the first version this was built and
-# proven against. A REQUIRES and not a RECOMMENDS — installed alone, this
+# this reads and writes. It is released in the same pass as reac-pw 1.0.44 and libreac 1.12.0, so those
+# are the floors; the ceilings are the next major (tests/deps-bounded.sh). A REQUIRES and not a RECOMMENDS — installed alone, this
 # window would have nothing to show and no door to write to.
-Requires:       reac-pw >= 1.0.5
+Requires:       reac-pw >= 1.0.44
+Requires:       reac-pw < 2
 Requires:       pipewire
 Requires:       hicolor-icon-theme
 
