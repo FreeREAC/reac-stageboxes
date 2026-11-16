@@ -27,7 +27,7 @@ jobs:
     steps:
       # libreac-devel comes from the OpenMixer channel: its header is the one home of the head-amp
       # vocabulary rs-headamp.h reads (#4); nothing of libreac is linked.
-      - uses: FreeMixer/.github/.github/actions/add-openmixer@v1
+      - uses: Open-Mixer/.github/.github/actions/add-openmixer@openmixer-v1
       - name: Install the build dependencies
         run: |
           dnf install -y -q --setopt=install_weak_deps=False \
@@ -48,7 +48,7 @@ jobs:
     container:
       image: debian:trixie
     steps:
-      - uses: FreeMixer/.github/.github/actions/add-openmixer@v1
+      - uses: Open-Mixer/.github/.github/actions/add-openmixer@openmixer-v1
       - name: Install the build dependencies
         run: |
           apt-get update -q
