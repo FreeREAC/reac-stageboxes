@@ -3,7 +3,7 @@ name: release
 # Packages through the shared release workflows of FreeMixer/.github. A tag v<version> that is the Version of
 # packaging/reac-stageboxes.spec builds signed RPMs (Fedora 44, x86_64 and aarch64) and DEBs (Debian trixie,
 # amd64 and arm64), publishes them to the FreeMixer channel and attaches them to the GitHub release, whose
-# notes are the git log since the previous tag. Any other run, a pull request or a branch, is a dry run: it
+# notes are the git log since the previous tag. Any other run, a dispatch on a branch, is a dry run: it
 # builds and lints everything and publishes nothing.
 #
 # The packages need reac-pw at run time only, so nothing here waits on another release.
@@ -11,8 +11,12 @@ name: release
 on:
   push:
     tags: ['v*']
-  pull_request:
   workflow_dispatch:
+    inputs:
+      same_pass:
+        description: 'Packages other repositories release in the same pass, space separated: the channel-installability gate reports a range they fall outside of, instead of failing on it'
+        type: string
+        default: ''
 
 # The shared workflows at v1 open an issue when a publish fails and read the run's own logs,
 # so the caller grants what their nested jobs declare: a caller that grants less cannot start.
@@ -27,6 +31,7 @@ jobs:
     with:
       package-name: reac-stageboxes
       publish: ${{ github.ref_type == 'tag' }}
+      same-pass: ${{ inputs.same_pass || '' }}
       needs-mod-host: false
       channel-deps: true
     secrets: inherit
@@ -36,6 +41,7 @@ jobs:
     with:
       package-name: reac-stageboxes
       publish: ${{ github.ref_type == 'tag' }}
+      same-pass: ${{ inputs.same_pass || '' }}
       dependencies: ''
       requires: ''
       channel-deps: true
