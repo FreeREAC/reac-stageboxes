@@ -1,7 +1,7 @@
 name: ci
 
 # The suite on every push to main and every pull request, on the two distributions the packages are built
-# for: Fedora 44 and Debian trixie (bookworm's libadwaita is older than the 1.4 this application needs).
+# for: Fedora 45 and Debian trixie (bookworm's libadwaita is older than the 1.4 this application needs).
 # `meson test` needs no PipeWire session and no stagebox. The release workflow builds the packages.
 
 on:
@@ -19,11 +19,11 @@ concurrency:
 
 jobs:
   fedora:
-    name: meson test, Fedora 44
+    name: meson test, Fedora 45
     runs-on: ubuntu-latest
     timeout-minutes: 20
     container:
-      image: fedora:44
+      image: fedora:45
     steps:
       # libreac-devel comes from the FreeREAC channel: its header is the one home of the head-amp
       # vocabulary rs-headamp.h reads (#4); nothing of libreac is linked.
@@ -37,6 +37,10 @@ jobs:
             git gcc meson ninja-build gettext desktop-file-utils appstream glibc-langpack-ca \
             pipewire-devel gtk4-devel libadwaita-devel libreac-devel
       - uses: actions/checkout@v4
+      - name: No Fedora 45 reference in the workflows
+        run: |
+          tools/test/workflow-fedora-check.sh --self-test
+          tools/test/workflow-fedora-check.sh .
       - name: Build and test
         run: |
           set -euo pipefail
