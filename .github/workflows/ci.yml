@@ -37,6 +37,10 @@ jobs:
             git gcc meson ninja-build gettext desktop-file-utils appstream glibc-langpack-ca \
             pipewire-devel gtk4-devel libadwaita-devel libreac-devel
       - uses: actions/checkout@v4
+      - name: No Fedora 44 reference in the workflows
+        run: |
+          tools/test/workflow-fedora-check.sh --self-test
+          tools/test/workflow-fedora-check.sh .
       - name: Build and test
         run: |
           set -euo pipefail
